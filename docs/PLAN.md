@@ -364,10 +364,44 @@ Settings exposes a "Neon" alternate (seed `#00E0FF`) shipped Phase 4. Display + 
 | 1 | Flutter scaffold, Material 3 theme, generator, game screen, lives, timer — fully offline | ~1 week |
 | 2 | Supabase auth (email + anonymous), profile, attempts, IQ formula, post-game screen | ~1 week |
 | 3 | Leaderboard + Realtime + Google/Apple sign-in + tier chips + basic podium | ~1 week |
-| 4 | Particles, Lottie, achievement engine + 12 achievements, neon theme | ~1 week |
-| 5 | Drift sync queue, `submit-attempt` Edge Function, anti-cheat, server IQ authority | ~1 week |
+| 4 | Particles, Lottie, achievement engine + 12 achievements, neon theme, Statistics tab | ~1 week |
+| 5 | Drift sync queue, `submit-attempt` Edge Function, anti-cheat, server IQ authority, peer solve % | ~1 week |
 | 6 | Pro IAP + AdMob + `verify-purchase` Edge Function + Restore Purchases | ~1 week |
 | 7 | Icons/splash, store screenshots, privacy policy, TestFlight, Play internal track, release | ~1 week |
+| 8 | Daily Challenge calendar, Championship season, Trophy room (post-launch growth) | ~2 weeks |
+
+## Inspiration & roadmap additions
+
+Reference: screenshots from Sudoku Master in `Screenshots/` (kept gitignored — local reference). Patterns absorbed:
+
+**Bake into Phase 1 game screen (UI wins, no extra backend):**
+
+- **Peer solve % banner** at puzzle start: a slide-in card showing "X.XX% of players have solved this puzzle" — meaningful difficulty calibration *from real peer data*, not just a static tier label. Phase 1 shows a placeholder ("—%"); Phase 5 wires real data via `puzzle_stats` aggregation.
+- **Streak counter** chip in the top-left header ("Streak 4"). Drives daily return.
+- **Mistakes as star icon** (★ N) for visual compactness instead of "Mistakes 1".
+- **Pencil/Notes toggle** with explicit ON/OFF label badge (not just an icon color change) — clearer state.
+- **Hint button** shows a count badge with hints remaining (cap 3 free / 5 Pro per puzzle). Tapping at zero opens the rewarded-ad-for-hint flow (free) or paywall (Pro upsell).
+- **Number-pad remaining-count subscripts** under each digit (e.g., "5₄" = four 5s left to place).
+- **Same-row / same-column / same-box dimming** + **same-digit highlighting** when a cell is selected.
+- **Pause icon** in the header (timer pauses, board obscures to prevent peeking).
+
+**Add to Phase 4 (after particles/achievements ship):**
+
+- **Statistics tab** per difficulty tier: `Games Started`, `Wins`, `Win Rate`, `Wins with No Mistakes`, `Best Time`, `Average Time`, `Current Win Streak`, `Best Win Streak`. Drives engagement post-game.
+- **Inline hint tutorial** (cross-hatching, naked single, hidden single explanations rendered on the board with dashed lines + R/C labels) instead of just revealing the digit. Distinguishes us from competitors.
+
+**Phase 5 backend additions:**
+
+- New table `puzzle_stats (puzzle_id, attempts, wins, fails, last_aggregated_at)` — updated by trigger on `puzzle_attempts` change. The peer solve % banner reads this.
+
+**Phase 8 — post-launch growth (new phase):**
+
+- **Daily Challenge mode**: deterministic seed `hash(yyyymmdd)`, calendar UI showing which days were completed (gold star), missed (greyed), today (highlight). Increases day-1 retention.
+- **Championship season**: time-limited (e.g., 5-day) leaderboard with countdown timer, separate from the persistent IQ leaderboard. Score = sum of session IQs above a tier threshold during the window. Top finishers get a Roman-numeral seasonal trophy ("Trophy IV" for 4th season).
+- **Trophy room**: gallery of unlocked seasonal trophies + achievement medals, with sparkle/twinkle particle background.
+- **Home screen redesign**: horizontal scrolling mode cards (Daily / Championship / Tier Practice) above a hero "current streak" block and a "Continue Level N" / "New Game" button row.
+
+Ship the core (Phases 1–7) first, then layer Phase 8 once real users signal which return loops they re-engage with.
 
 ## Critical paths & risks
 

@@ -1,0 +1,69 @@
+name: heffelhoff_sudoku
+description: A stylish Sudoku game with a per-puzzle IQ score, tiered leaderboards, and an envy-inducing top-3 podium. Backed by Supabase.
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+  # 3.27+ for Color.withValues, Material 3 expressive surfaces, and the
+  # latest DynamicSchemeVariant options.
+  flutter: ">=3.27.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management & routing
+  flutter_riverpod: ^2.5.1
+  go_router: ^14.6.0
+
+  # Supabase
+  supabase_flutter: ^2.8.0
+
+  # Local storage (Phase 5 sync queue)
+  drift: ^2.20.3
+  sqlite3_flutter_libs: ^0.5.24
+  path_provider: ^2.1.5
+  path: ^1.9.0
+
+  # Network awareness
+  connectivity_plus: ^6.1.0
+
+  # Animations & celebration
+  flutter_animate: ^4.5.2
+  confetti: ^0.8.0
+  lottie: ^3.1.3
+
+  # Auth (Phase 2/3)
+  google_sign_in: ^6.2.2
+  sign_in_with_apple: ^6.1.4
+
+  # Monetization (Phase 6)
+  in_app_purchase: ^3.2.0
+  google_mobile_ads: ^5.2.0
+
+  # Typography
+  google_fonts: ^6.2.1
+
+  # Haptics
+  vibration: ^2.0.1
+
+  # Misc
+  cached_network_image: ^3.4.1
+  intl: ^0.19.0
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  mocktail: ^1.0.4
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/lottie/
+    - assets/icons/
+  # Fonts pulled at runtime via google_fonts; no bundled font assets yet.
