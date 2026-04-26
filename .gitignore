@@ -105,3 +105,6 @@ supabase/functions/**/dist/
 *.tmp
 *.bak
 .history/
+
+# ---- Local reference / inspiration material (not in repo) ----
+Screenshots/
