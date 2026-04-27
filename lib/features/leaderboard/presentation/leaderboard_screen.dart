@@ -56,12 +56,26 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: stream.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => _ErrorView(message: '$e'),
-                data: (entries) => _LeaderboardBody(
-                  entries: entries,
-                  currentUserId: currentUser?.id,
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(leaderboardStreamProvider(_tier));
+                  // Wait briefly so the spinner shows even when the
+                  // re-fetch is instant.
+                  await Future<void>.delayed(const Duration(milliseconds: 400));
+                },
+                child: stream.when(
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      SizedBox(height: MediaQuery.of(context).size.height * 0.15),
+                      _ErrorView(message: '$e'),
+                    ],
+                  ),
+                  data: (entries) => _LeaderboardBody(
+                    entries: entries,
+                    currentUserId: currentUser?.id,
+                  ),
                 ),
               ),
             ),
@@ -319,18 +333,36 @@ class _ErrorView extends StatelessWidget {
   ({String title, String body, IconData icon}) get _humanised {
     final lower = message.toLowerCase();
 
-    // PGRST205 = relation not in PostgREST schema cache. Always means
-    // the migration that creates leaderboard_entries hasn't been run.
+    // PGRST205 = relation not in PostgREST schema cache. Either:
+    //  - the migration hasn't been run yet, OR
+    //  - the migration HAS been run but PostgREST's schema cache is
+    //    stale (it lazily refreshes every few minutes; can be forced
+    //    via `NOTIFY pgrst, 'reload schema';` in the SQL editor).
     if (lower.contains('pgrst205') ||
         (lower.contains('schema cache') && lower.contains('leaderboard'))) {
       return (
-        title: 'Database not deployed yet',
-        body: 'The leaderboard tables don\'t exist in your Supabase '
-            'project yet. Run the SQL migrations in '
-            'supabase/migrations/ — see docs/SUPABASE.md for the '
-            'CLI command or how to paste them into the dashboard '
-            'SQL editor.',
+        title: 'Schema cache not ready',
+        body: 'Either the leaderboard migrations haven\'t been '
+            'pushed yet, or PostgREST is still refreshing its '
+            'schema cache after a recent push. Run "supabase db '
+            'push" if you haven\'t, then go to the SQL editor and '
+            "run: NOTIFY pgrst, 'reload schema';  This usually "
+            'clears in a few minutes on its own. Pull to retry.',
         icon: Icons.cloud_off_outlined,
+      );
+    }
+
+    // PGRST200 = relationship not found between two tables. Almost
+    // always means the leaderboard ↔ profiles direct FK is missing
+    // (added by 0004_leaderboard_profiles_fk.sql).
+    if (lower.contains('pgrst200') ||
+        lower.contains('could not find a relationship')) {
+      return (
+        title: 'Schema relationship missing',
+        body: 'PostgREST can\'t find the FK between leaderboard '
+            'entries and profiles. Run "supabase db push" to apply '
+            '0004_leaderboard_profiles_fk.sql, then NOTIFY pgrst.',
+        icon: Icons.link_off_outlined,
       );
     }
 
