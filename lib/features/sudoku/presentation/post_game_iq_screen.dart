@@ -28,6 +28,7 @@ class PostGameIqScreen extends StatefulWidget {
     required this.wasUnderTarget,
     required this.onPlayAgain,
     required this.onBackToStart,
+    this.onNext,
   });
 
   final Puzzle puzzle;
@@ -39,6 +40,11 @@ class PostGameIqScreen extends StatefulWidget {
   final bool wasUnderTarget;
   final VoidCallback onPlayAgain;
   final VoidCallback onBackToStart;
+
+  /// Primary CTA on a win: typically navigates to the leaderboard with
+  /// climb-animation context. When null, only the secondary actions
+  /// show.
+  final VoidCallback? onNext;
 
   @override
   State<PostGameIqScreen> createState() => _PostGameIqScreenState();
@@ -80,12 +86,12 @@ class _PostGameIqScreenState extends State<PostGameIqScreen> {
     final text = Theme.of(context).textTheme;
 
     if (!widget.won) {
-      return Center(
+      return SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             children: [
+              const Spacer(),
               Icon(Icons.heart_broken, size: 72, color: palette.lifeRed),
               const SizedBox(height: 16),
               Text('Out of lives', style: text.headlineSmall),
@@ -93,10 +99,17 @@ class _PostGameIqScreenState extends State<PostGameIqScreen> {
               Text(
                 '${widget.mistakes} mistakes. No IQ awarded.',
                 style: text.bodyLarge?.copyWith(color: scheme.onSurfaceVariant),
+                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 32),
-              FilledButton(onPressed: widget.onPlayAgain, child: const Text('Try again')),
-              const SizedBox(height: 8),
+              const Spacer(),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: widget.onPlayAgain,
+                  child: const Text('Try again'),
+                ),
+              ),
+              const SizedBox(height: 4),
               TextButton(
                 onPressed: widget.onBackToStart,
                 child: const Text('Back to start'),
@@ -229,11 +242,18 @@ class _PostGameIqScreenState extends State<PostGameIqScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    FilledButton(
+                    if (widget.onNext != null)
+                      FilledButton.icon(
+                        onPressed: widget.onNext,
+                        icon: const Icon(Icons.emoji_events_outlined),
+                        label: const Text('Next — see leaderboard'),
+                      ),
+                    if (widget.onNext != null) const SizedBox(height: 6),
+                    OutlinedButton(
                       onPressed: widget.onPlayAgain,
                       child: const Text('Play again'),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     TextButton(
                       onPressed: widget.onBackToStart,
                       child: const Text('Back to start'),
