@@ -22,8 +22,8 @@ Dependencies:
 Usage:
     python3 tools/generate_apple_jwt.py \\
         --p8 /path/to/AuthKey_XXXXXXXXXX.p8 \\
-        --team-id WWMRM77FM3 \\
-        --services-id com.heffelhoff.heffelhoff-sudoku.signin \\
+        --team-id YOUR_TEAM_ID \\
+        --services-id com.your.app.signin \\
         --key-id ABCDEFGHIJ \\
         --validity-days 180
 

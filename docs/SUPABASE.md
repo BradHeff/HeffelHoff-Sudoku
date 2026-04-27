@@ -27,7 +27,7 @@ npm install -g supabase
 
 # Link local repo to the remote project
 supabase login
-supabase link --project-ref kosrtjwfjsdpxahgdpas
+supabase link --project-ref YOUR_PROJECT_REF
 
 # Push migrations
 supabase db push
@@ -35,7 +35,7 @@ supabase db push
 
 ### Option B — Dashboard SQL editor
 
-1. Open https://supabase.com/dashboard/project/kosrtjwfjsdpxahgdpas
+1. Open https://supabase.com/dashboard/project/YOUR_PROJECT_REF
 2. **SQL Editor** → New query
 3. Paste the contents of `0001_init.sql`, run
 4. Repeat for `0002_rls.sql` and `0003_functions_triggers.sql` **in order**

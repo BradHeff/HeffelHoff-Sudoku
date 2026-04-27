@@ -22,14 +22,14 @@ The directory `/media/Windows1/Projectz/HeffelHoff-Sudoku/` is currently empty. 
 
 ## Supabase project (already provisioned)
 
-- **Project URL:** `https://kosrtjwfjsdpxahgdpas.supabase.co`
-- **Publishable (anon) key:** `sb_publishable_NziQ8aCMyzJFU3rn0NCfWQ_c7Qm0fQd`
-- **Service-role key:** **not yet captured** — needed for Edge Functions only, never shipped to the client. Pull from Supabase dashboard → Project Settings → API and store as a secret in `supabase functions secrets set SUPABASE_SERVICE_ROLE_KEY=...`.
+- **Project URL:** `https://YOUR_PROJECT_REF.supabase.co` (real value lives in the dev machine's gitignored `.env.claude.local.md`)
+- **Publishable (anon) key:** `sb_publishable_<your-publishable-key>` (real value in `.env.claude.local.md`)
+- **Service-role key:** never captured locally — needed for Edge Functions only, never shipped to the client. Pull from Supabase dashboard → Project Settings → API and store as a secret in `supabase functions secrets set SUPABASE_SERVICE_ROLE_KEY=...`.
 
 **Wiring in Flutter (no `.env` file in repo):**
 
 - Pass via `--dart-define` at build time so secrets aren't baked into source:
-  - `flutter run --dart-define=SUPABASE_URL=https://kosrtjwfjsdpxahgdpas.supabase.co --dart-define=SUPABASE_ANON_KEY=sb_publishable_NziQ8aCMyzJFU3rn0NCfWQ_c7Qm0fQd`
+  - `flutter run --dart-define=SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co --dart-define=SUPABASE_ANON_KEY=sb_publishable_<your-publishable-key>`
 - For local dev convenience, support reading the same vars from a gitignored `.env` via `flutter_dotenv` *only* when `kDebugMode`.
 - `lib/core/supabase/supabase_client.dart` reads from `String.fromEnvironment('SUPABASE_URL')` first, falls back to dotenv in debug.
 - `.gitignore` must include: `.env`, `.env.*`, `ios/Flutter/Generated.xcconfig`, `android/key.properties`, Supabase service-role secrets.

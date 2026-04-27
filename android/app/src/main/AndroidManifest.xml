@@ -32,10 +32,13 @@
             android:value="2" />
 
         <!-- AdMob App ID (Android). Required by google_mobile_ads or the
-             MobileAdsInitProvider crashes the app at startup. -->
+             MobileAdsInitProvider crashes the app at startup.
+             Injected at build time via Gradle manifestPlaceholders from
+             android/local.properties (key: ADMOB_APP_ID_ANDROID).
+             Falls back to Google's sample App ID when not configured. -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-7297042648861877~8173188422" />
+            android:value="${admobAppId}" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
