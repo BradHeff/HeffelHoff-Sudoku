@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/audio/sound_service.dart';
 import '../data/backtracking_generator.dart';
 import '../domain/board.dart';
 import '../domain/difficulty.dart';
@@ -14,13 +15,19 @@ import 'iq_calculator.dart';
 /// mistake counter, pencil mode, and validation against the canonical
 /// solution. Lives default to 3 (free) — Phase 6 wires Pro to bump to 5.
 class GameController extends StateNotifier<GameState> {
-  GameController({required Difficulty difficulty, int? seed, int maxLives = 3})
-      : _maxLives = maxLives,
+  GameController({
+    required Difficulty difficulty,
+    required SoundService sound,
+    int? seed,
+    int maxLives = 3,
+  })  : _maxLives = maxLives,
+        _sound = sound,
         super(GameLoading(difficulty: difficulty)) {
     _start(difficulty: difficulty, seed: seed);
   }
 
   final int _maxLives;
+  final SoundService _sound;
   Timer? _ticker;
   Timer? _digitCelebrationTimer;
 
@@ -71,10 +78,39 @@ class GameController extends StateNotifier<GameState> {
     });
   }
 
+  /// Tap-to-select. Highlight rules per docs:
+  ///   - Tap a filled cell → highlight that digit.
+  ///   - Tap an empty cell while a highlight is active → keep it
+  ///     (user is *intending* to enter that digit there).
+  ///   - Tap a *second* empty cell without entering anything between
+  ///     them → clear the highlight (lost intent).
   void selectCell(int row, int col) {
     final s = state;
     if (s is! GameOngoing) return;
-    state = s.copyWith(selected: (row: row, col: col));
+
+    final newCell = s.board.at(row, col);
+    final prev = s.selected;
+    final prevCell = prev != null ? s.board.at(prev.row, prev.col) : null;
+    final prevWasFilled = prevCell != null && prevCell.value != 0 && !prevCell.isWrong;
+
+    int? nextHighlight;
+    var clearHighlight = false;
+    if (newCell.value != 0 && !newCell.isWrong) {
+      // Filled cell tapped — highlight that digit.
+      nextHighlight = newCell.value;
+    } else if (prevWasFilled && s.highlightedDigit != null) {
+      // First empty-cell tap after a filled-cell tap — keep the highlight.
+      nextHighlight = s.highlightedDigit;
+    } else {
+      // Empty → empty (or no prior selection) — clear.
+      clearHighlight = true;
+    }
+
+    state = s.copyWith(
+      selected: (row: row, col: col),
+      highlightedDigit: nextHighlight,
+      clearHighlight: clearHighlight,
+    );
   }
 
   void togglePencil() {
@@ -117,11 +153,21 @@ class GameController extends StateNotifier<GameState> {
     final correct = s.puzzle.isCorrect(row: sel.row, col: sel.col, value: digit);
     if (correct) {
       final next = s.board.withCell(cell.copyWith(value: digit, pencilMarks: 0, isWrong: false));
-      _afterPlacement(s, next, placedDigit: digit);
+      // Successful placement → make the just-placed digit the new
+      // highlight so chain entries flow naturally.
+      _sound.play(SoundEvent.placeCorrect);
+      _afterPlacement(
+        s.copyWith(highlightedDigit: digit),
+        next,
+        placedDigit: digit,
+        placedRow: sel.row,
+        placedCol: sel.col,
+      );
       return true;
     }
 
     // Wrong: place visibly, mark wrong, decrement lives.
+    _sound.play(SoundEvent.placeWrong);
     final wrongCell = cell.copyWith(value: digit, pencilMarks: 0, isWrong: true);
     final lives = s.lives - 1;
     final mistakes = s.mistakes + 1;
@@ -177,13 +223,27 @@ class GameController extends StateNotifier<GameState> {
     final next = s.board.withCell(
       cell.copyWith(value: correct, pencilMarks: 0, isWrong: false),
     );
-    _afterPlacement(s.copyWith(hintsUsed: s.hintsUsed + 1), next, placedDigit: correct);
+    _afterPlacement(
+      s.copyWith(hintsUsed: s.hintsUsed + 1),
+      next,
+      placedDigit: correct,
+      placedRow: sel.row,
+      placedCol: sel.col,
+    );
   }
 
-  /// Called after a *correct* placement of [placedDigit] on [next]. Detects
-  /// when the placement was the 9th instance of that digit (transition
-  /// 8→9) and fires the digit-complete celebration.
-  void _afterPlacement(GameOngoing s, Board next, {required int placedDigit}) {
+  /// Called after a *correct* placement on [next]. Detects 8→9 transitions
+  /// for the placed digit, the row, the column, and the 3×3 box that the
+  /// placement falls in, and fires a celebration covering whichever
+  /// structures completed (any combination, including all four — a quad
+  /// combo is rare but possible).
+  void _afterPlacement(
+    GameOngoing s,
+    Board next, {
+    required int placedDigit,
+    required int placedRow,
+    required int placedCol,
+  }) {
     if (next.isFull) {
       _stopTicker();
       final time = s.elapsed.inSeconds;
@@ -193,6 +253,10 @@ class GameController extends StateNotifier<GameState> {
         mistakes: s.mistakes,
         hintsUsed: s.hintsUsed,
       );
+      final wasUnderTarget = time < s.difficulty.targetTimeSeconds;
+      _sound.play(
+        wasUnderTarget ? SoundEvent.puzzleCompleteGenius : SoundEvent.puzzleComplete,
+      );
       state = GameWon(
         puzzle: s.puzzle,
         timeSeconds: time,
@@ -200,23 +264,64 @@ class GameController extends StateNotifier<GameState> {
         hintsUsed: s.hintsUsed,
         livesRemaining: s.lives,
         iqScore: iq.iqScore,
+        wasUnderTarget: wasUnderTarget,
       );
       return;
     }
 
-    // Detect the 8 → 9 transition for the placed digit.
-    final wasComplete = s.board.countDigit(placedDigit) == 9;
-    final nowComplete = next.countDigit(placedDigit) == 9;
-    if (!wasComplete && nowComplete) {
+    // Detect 8 → 9 transitions for the four structure types.
+    final placedBox = (placedRow ~/ 3) * 3 + (placedCol ~/ 3);
+
+    final completedDigit = (s.board.countDigit(placedDigit) != 9 &&
+            next.countDigit(placedDigit) == 9)
+        ? placedDigit
+        : null;
+    final completedRow = (!s.board.rowFull(placedRow) && next.rowFull(placedRow))
+        ? placedRow
+        : null;
+    final completedCol = (!s.board.colFull(placedCol) && next.colFull(placedCol))
+        ? placedCol
+        : null;
+    final completedBox = (!s.board.boxFull(placedBox) && next.boxFull(placedBox))
+        ? placedBox
+        : null;
+
+    final anyCompletion = completedDigit != null ||
+        completedRow != null ||
+        completedCol != null ||
+        completedBox != null;
+
+    if (anyCompletion) {
       _digitCelebrationTimer?.cancel();
+      final at = DateTime.now();
+
+      // Sound: pick the most "exciting" event that fired. Digit-complete
+      // (rarest, highest impact) wins over structure-complete; combos
+      // upgrade to a louder cue.
+      final structureCount = [completedRow, completedCol, completedBox]
+          .where((e) => e != null)
+          .length;
+      if (completedDigit != null) {
+        _sound.play(SoundEvent.digitComplete);
+      } else if (structureCount >= 3) {
+        _sound.play(SoundEvent.comboTriple);
+      } else if (structureCount == 2) {
+        _sound.play(SoundEvent.comboDouble);
+      } else {
+        _sound.play(SoundEvent.structureComplete);
+      }
+
       state = s.copyWith(
         board: next,
-        lastCompletedDigit: placedDigit,
-        lastCompletedAt: DateTime.now(),
+        lastCompletedDigit: completedDigit,
+        lastCompletedRow: completedRow,
+        lastCompletedCol: completedCol,
+        lastCompletedBox: completedBox,
+        lastCompletedAt: at,
       );
       _digitCelebrationTimer = Timer(kDigitCelebrationDuration, () {
         final cur = state;
-        if (cur is GameOngoing && cur.lastCompletedDigit == placedDigit) {
+        if (cur is GameOngoing && cur.lastCompletedAt == at) {
           state = cur.copyWith(clearLastCompleted: true);
         }
       });
@@ -242,5 +347,9 @@ class GameController extends StateNotifier<GameState> {
 /// for testability; pass null to use the wall clock.
 final gameControllerProvider = StateNotifierProvider.autoDispose
     .family<GameController, GameState, ({Difficulty difficulty, int? seed})>(
-  (ref, args) => GameController(difficulty: args.difficulty, seed: args.seed),
+  (ref, args) => GameController(
+    difficulty: args.difficulty,
+    seed: args.seed,
+    sound: ref.watch(soundServiceProvider),
+  ),
 );

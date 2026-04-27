@@ -74,4 +74,37 @@ class Board {
   /// counter.
   int countDigit(int digit) =>
       _cells.where((c) => c.value == digit).length;
+
+  /// True when every cell in [row] (0..8) is non-empty (and not flagged
+  /// wrong). The "wrong" exclusion keeps us from celebrating a row that
+  /// is full only because a wrong-entry is briefly displayed before the
+  /// auto-clear.
+  bool rowFull(int row) {
+    for (var c = 0; c < 9; c++) {
+      final cell = _cells[row * 9 + c];
+      if (cell.value == 0 || cell.isWrong) return false;
+    }
+    return true;
+  }
+
+  bool colFull(int col) {
+    for (var r = 0; r < 9; r++) {
+      final cell = _cells[r * 9 + col];
+      if (cell.value == 0 || cell.isWrong) return false;
+    }
+    return true;
+  }
+
+  /// [box] is the 3×3 box index 0..8, ordered left-to-right, top-to-bottom.
+  bool boxFull(int box) {
+    final br = (box ~/ 3) * 3;
+    final bc = (box % 3) * 3;
+    for (var dr = 0; dr < 3; dr++) {
+      for (var dc = 0; dc < 3; dc++) {
+        final cell = _cells[(br + dr) * 9 + bc + dc];
+        if (cell.value == 0 || cell.isWrong) return false;
+      }
+    }
+    return true;
+  }
 }

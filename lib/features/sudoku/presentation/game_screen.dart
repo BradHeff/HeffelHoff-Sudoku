@@ -13,6 +13,7 @@ import 'widgets/digit_complete_overlay.dart';
 import 'widgets/lives_row.dart';
 import 'widgets/number_pad.dart';
 import 'widgets/peer_solve_banner.dart';
+import 'widgets/structure_complete_toast.dart';
 import 'widgets/timer_chip.dart';
 
 /// Phase 1 hint cap (shared with the controller-level hint method).
@@ -43,7 +44,9 @@ class GameScreen extends ConsumerWidget {
               hintsUsed: w.hintsUsed,
               iqScore: w.iqScore,
               won: true,
-              onReplay: () => context.go('/'),
+              wasUnderTarget: w.wasUnderTarget,
+              onPlayAgain: () => context.go('/game/${difficulty.id}'),
+              onBackToStart: () => context.go('/'),
             ),
           final GameLost l => PostGameIqScreen(
               puzzle: l.puzzle,
@@ -52,7 +55,9 @@ class GameScreen extends ConsumerWidget {
               hintsUsed: 0,
               iqScore: 0,
               won: false,
-              onReplay: () => context.go('/'),
+              wasUnderTarget: false,
+              onPlayAgain: () => context.go('/game/${difficulty.id}'),
+              onBackToStart: () => context.go('/'),
             ),
         },
       ),
@@ -146,7 +151,14 @@ class _OngoingViewState extends State<_OngoingView> {
     final controller = widget.controller;
     final hintsRemaining = (kHintCapFree - state.hintsUsed).clamp(0, kHintCapFree);
     final celebrateDigit = state.lastCompletedDigit;
+    final celebrateRow = state.lastCompletedRow;
+    final celebrateCol = state.lastCompletedCol;
+    final celebrateBox = state.lastCompletedBox;
     final celebrateKey = state.lastCompletedAt;
+    final hasStructureToast = celebrateRow != null ||
+        celebrateCol != null ||
+        celebrateBox != null ||
+        celebrateDigit != null;
 
     return Stack(
       children: [
@@ -170,15 +182,40 @@ class _OngoingViewState extends State<_OngoingView> {
               const SizedBox(height: 12),
               const PeerSolveBanner(solveRatePercent: null),
               const SizedBox(height: 12),
-              BoardWidget(
-                board: state.board,
-                selected: state.selected,
-                celebrateDigit: celebrateDigit,
-                celebrateKey: celebrateKey,
-                onCellTap: (r, c) {
-                  HapticFeedback.selectionClick();
-                  controller.selectCell(r, c);
-                },
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  BoardWidget(
+                    board: state.board,
+                    selected: state.selected,
+                    highlightedDigit: state.highlightedDigit,
+                    celebrateDigit: celebrateDigit,
+                    celebrateRow: celebrateRow,
+                    celebrateCol: celebrateCol,
+                    celebrateBox: celebrateBox,
+                    celebrateKey: celebrateKey,
+                    onCellTap: (r, c) {
+                      HapticFeedback.selectionClick();
+                      controller.selectCell(r, c);
+                    },
+                  ),
+                  // Stacked structure-complete toasts above the board.
+                  if (hasStructureToast && celebrateKey != null)
+                    Positioned(
+                      top: -56,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: StructureCompleteToast(
+                          completedRow: celebrateRow,
+                          completedCol: celebrateCol,
+                          completedBox: celebrateBox,
+                          completedDigit: celebrateDigit,
+                          triggeredAt: celebrateKey,
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 16),
               _ToolsRow(
@@ -217,6 +254,7 @@ class _OngoingViewState extends State<_OngoingView> {
             ],
           ),
         ),
+        // Centered overlay only for digit-complete (rarest, biggest moment).
         if (celebrateDigit != null && celebrateKey != null)
           Positioned.fill(
             child: DigitCompleteOverlay(
