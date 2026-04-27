@@ -43,13 +43,10 @@ dependencies:
   #   google_sign_in: ^6.2.2
   #   sign_in_with_apple: ^6.1.4
 
-  # Monetization (Phase 6) — deferred. google_mobile_ads is intentionally
-  # NOT pulled in until then because its MobileAdsInitProvider crashes
-  # the app at startup unless a valid AdMob APPLICATION_ID meta-data tag
-  # is present in AndroidManifest. We'll add the package + real App ID
-  # together in Phase 6.
+  # Monetization
+  google_mobile_ads: ^5.2.0
+  # in_app_purchase added when store accounts are configured:
   #   in_app_purchase: ^3.2.0
-  #   google_mobile_ads: ^5.2.0
 
   # Typography
   google_fonts: ^6.2.1
