@@ -22,13 +22,15 @@ class LeaderboardRepository {
     required Difficulty difficulty,
     int limit = defaultLimit,
   }) async {
+    // Tie-break: when two users have the same best_iq, the one who
+    // *achieved that IQ first* ranks higher. (achieved_at ascending).
     final rows = await _client
         .from('leaderboard_entries')
         .select('user_id, difficulty, best_iq, best_time_seconds, achieved_at, '
             'profiles!inner(display_name, avatar_url, is_pro)')
         .eq('difficulty', difficulty.id)
         .order('best_iq', ascending: false)
-        .order('best_time_seconds', ascending: true)
+        .order('achieved_at', ascending: true)
         .limit(limit);
     return rows.map<LeaderboardEntry>(LeaderboardEntry.fromRow).toList();
   }

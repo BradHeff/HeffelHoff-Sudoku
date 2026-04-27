@@ -41,7 +41,7 @@ class RankRosette extends StatelessWidget {
           child: Text(
             '$rank',
             style: TextStyle(
-              color: highlight ? Colors.white : scheme.onSurface,
+              color: _foregroundFor(color, scheme.onSurface, highlight),
               fontWeight: FontWeight.w900,
               fontSize: size * 0.42,
               height: 1.0,
@@ -51,6 +51,14 @@ class RankRosette extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Pick a foreground that contrasts against the rosette fill.
+  Color _foregroundFor(Color fill, Color fallback, bool highlight) {
+    if (highlight) return Colors.white;
+    // ITU-R BT.601 luma — light fills (gold/silver/bronze) get dark text.
+    final luma = (0.299 * fill.r + 0.587 * fill.g + 0.114 * fill.b);
+    return luma > 0.6 ? const Color(0xFF21140A) : fallback;
   }
 }
 
