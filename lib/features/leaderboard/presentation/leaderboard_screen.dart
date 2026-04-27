@@ -314,27 +314,77 @@ class _ErrorView extends StatelessWidget {
   const _ErrorView({required this.message});
   final String message;
 
+  /// Common Supabase failure modes get a friendlier translation; raw
+  /// error otherwise.
+  ({String title, String body, IconData icon}) get _humanised {
+    final lower = message.toLowerCase();
+
+    // PGRST205 = relation not in PostgREST schema cache. Always means
+    // the migration that creates leaderboard_entries hasn't been run.
+    if (lower.contains('pgrst205') ||
+        (lower.contains('schema cache') && lower.contains('leaderboard'))) {
+      return (
+        title: 'Database not deployed yet',
+        body: 'The leaderboard tables don\'t exist in your Supabase '
+            'project yet. Run the SQL migrations in '
+            'supabase/migrations/ — see docs/SUPABASE.md for the '
+            'CLI command or how to paste them into the dashboard '
+            'SQL editor.',
+        icon: Icons.cloud_off_outlined,
+      );
+    }
+
+    if (lower.contains('jwt') || lower.contains('not authenticated')) {
+      return (
+        title: 'Not signed in',
+        body: 'Tap the avatar on the home screen to sign in or '
+            'continue as guest before viewing the leaderboard.',
+        icon: Icons.lock_outline,
+      );
+    }
+
+    if (lower.contains('network') ||
+        lower.contains('failed host lookup') ||
+        lower.contains('socketexception')) {
+      return (
+        title: 'No connection',
+        body: 'The leaderboard needs an internet connection. Check '
+            'your network and try again.',
+        icon: Icons.wifi_off_outlined,
+      );
+    }
+
+    return (
+      title: 'Could not load the leaderboard',
+      body: message,
+      icon: Icons.error_outline,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final h = _humanised;
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline, size: 48, color: scheme.error),
+            Icon(h.icon, size: 48, color: scheme.error),
             const SizedBox(height: 12),
             Text(
-              'Could not load the leaderboard',
+              h.title,
+              textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
             Text(
-              message,
+              h.body,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: scheme.onSurfaceVariant,
+                    height: 1.4,
                   ),
             ),
           ],

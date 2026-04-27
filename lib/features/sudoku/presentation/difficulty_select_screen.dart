@@ -101,17 +101,62 @@ class DifficultySelectScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 14),
               Expanded(
-                child: ListView.separated(
-                  padding: EdgeInsets.zero,
-                  physics: const ClampingScrollPhysics(),
-                  itemCount: Difficulty.values.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, i) {
-                    final tier = Difficulty.values[i];
-                    return TierCard(
-                      tier: tier,
-                      onTap: () => context.go('/game/${tier.id}'),
-                    ).animate(delay: (80 * i).ms).fadeIn(duration: 300.ms).slideX(begin: 0.1);
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    const tiers = Difficulty.values;
+                    const separator = 10.0;
+                    final totalSeparators = separator * (tiers.length - 1);
+                    final totalMinHeight = tiers
+                            .map(TierCard.minHeightFor)
+                            .reduce((a, b) => a + b)
+                            .toDouble() +
+                        totalSeparators;
+                    final available = constraints.maxHeight;
+
+                    // If the screen can't fit even the minimum heights,
+                    // fall back to a scrollable list at the per-tier
+                    // minimums.
+                    if (available <= totalMinHeight) {
+                      return ListView.separated(
+                        padding: EdgeInsets.zero,
+                        physics: const ClampingScrollPhysics(),
+                        itemCount: tiers.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: separator),
+                        itemBuilder: (context, i) {
+                          final tier = tiers[i];
+                          return TierCard(
+                            tier: tier,
+                            onTap: () => context.go('/game/${tier.id}'),
+                          )
+                              .animate(delay: (80 * i).ms)
+                              .fadeIn(duration: 300.ms)
+                              .slideX(begin: 0.1);
+                        },
+                      );
+                    }
+
+                    // Otherwise scale every card proportionally so the
+                    // five cards (plus fixed separators) exactly fill
+                    // the available height.
+                    final scale =
+                        (available - totalSeparators) / (totalMinHeight - totalSeparators);
+                    return Column(
+                      children: [
+                        for (var i = 0; i < tiers.length; i++) ...[
+                          TierCard(
+                            tier: tiers[i],
+                            onTap: () => context.go('/game/${tiers[i].id}'),
+                            height: TierCard.minHeightFor(tiers[i]) * scale,
+                          )
+                              .animate(delay: (80 * i).ms)
+                              .fadeIn(duration: 300.ms)
+                              .slideX(begin: 0.1),
+                          if (i < tiers.length - 1)
+                            const SizedBox(height: separator),
+                        ],
+                      ],
+                    );
                   },
                 ),
               ),
