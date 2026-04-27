@@ -37,6 +37,8 @@ class GameOngoing extends GameState {
     this.lastCompletedBox,
     this.lastCompletedAt,
     this.highlightedDigit,
+    this.extraHintPurchased = false,
+    this.extraLifeUsed = false,
   });
 
   final Puzzle puzzle;
@@ -56,6 +58,8 @@ class GameOngoing extends GameState {
   final int? lastCompletedBox;
   final DateTime? lastCompletedAt;
   final int? highlightedDigit;
+  final bool extraHintPurchased;
+  final bool extraLifeUsed;
 
   bool get hasAnyCompletion =>
       lastCompletedDigit != null ||
@@ -84,6 +88,8 @@ class GameOngoing extends GameState {
     bool clearLastCompleted = false,
     int? highlightedDigit,
     bool clearHighlight = false,
+    bool? extraHintPurchased,
+    bool? extraLifeUsed,
   }) {
     return GameOngoing(
       puzzle: puzzle,
@@ -109,8 +115,15 @@ class GameOngoing extends GameState {
           clearLastCompleted ? null : (lastCompletedAt ?? this.lastCompletedAt),
       highlightedDigit:
           clearHighlight ? null : (highlightedDigit ?? this.highlightedDigit),
+      extraHintPurchased: extraHintPurchased ?? this.extraHintPurchased,
+      extraLifeUsed: extraLifeUsed ?? this.extraLifeUsed,
     );
   }
+}
+
+class GameOutOfLives extends GameState {
+  const GameOutOfLives({required this.ongoing});
+  final GameOngoing ongoing;
 }
 
 class GameWon extends GameState {
