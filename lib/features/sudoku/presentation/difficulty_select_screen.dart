@@ -22,28 +22,66 @@ class DifficultySelectScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 24),
-              Text(
-                'HeffelHoff',
-                style: iqDisplayStyle(context, size: 36, color: scheme.onSurfaceVariant),
+              const SizedBox(height: 12),
+              // Brand logo + wordmark hero block.
+              Row(
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: scheme.primary.withValues(alpha: 0.45),
+                          blurRadius: 24,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: Image.asset('assets/branding/logo.png'),
+                  ).animate().fadeIn(duration: 400.ms).scale(
+                        begin: const Offset(0.6, 0.6),
+                        end: const Offset(1, 1),
+                        duration: 400.ms,
+                        curve: Curves.easeOutBack,
+                      ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'HEFFELHOFF',
+                          style: iqDisplayStyle(
+                            context,
+                            size: 14,
+                            color: scheme.onSurfaceVariant,
+                          ).copyWith(letterSpacing: 4, fontWeight: FontWeight.w400),
+                        ),
+                        ShaderMask(
+                          shaderCallback: (rect) => LinearGradient(
+                            colors: palette.iqGenius,
+                          ).createShader(rect),
+                          child: Text(
+                            'SUDOKU',
+                            style: iqDisplayStyle(context, size: 40, color: Colors.white)
+                                .copyWith(letterSpacing: 4, fontWeight: FontWeight.w900),
+                          ),
+                        ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.2),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                'SUDOKU',
-                style: iqDisplayStyle(context, size: 64).copyWith(
-                  foreground: Paint()
-                    ..shader = LinearGradient(
-                      colors: palette.iqGenius,
-                    ).createShader(const Rect.fromLTWH(0, 0, 360, 80)),
-                ),
-              ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.2),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Text(
                 'Pick your difficulty.',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: scheme.onSurfaceVariant,
                     ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
               Expanded(
                 child: ListView.separated(
                   itemCount: Difficulty.values.length,

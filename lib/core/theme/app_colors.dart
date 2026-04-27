@@ -83,33 +83,44 @@ class AppPalette extends ThemeExtension<AppPalette> {
   /// Thick lines between 3×3 boxes.
   final Color boardLineThick;
 
+  // ---------------------------------------------------------------------
+  // Brand palette extracted from assets/branding/playstore_icon.png:
+  //   #01072D deep navy   — base background
+  //   #030D4E dark navy   — surface
+  //   #05166F mid navy    — elevated surface
+  //   #1948E0 electric    — secondary accent (peer wash, info)
+  //   #36A8FA cyan glow   — PRIMARY brand accent (selected, headlines)
+  //   #A35DF4 violet      — tertiary accent (HH letterform, achievements)
+  //   #E4EDFC pale ice    — foreground text on dark surfaces
+  // See docs/BRANDING.md for the canonical guide.
+  // ---------------------------------------------------------------------
   static const dark = AppPalette(
     goldFrame: [Color(0xFFFFD700), Color(0xFFFFA500)],
     silverFrame: [Color(0xFFC0C0C0), Color(0xFFE5E4E2)],
     bronzeFrame: [Color(0xFFCD7F32), Color(0xFFB87333)],
     lifeRed: Color(0xFFFF5470),
     lifeRedFaded: Color(0x33FF5470),
-    iqGenius: [Color(0xFFB388FF), Color(0xFF7C4DFF), Color(0xFF536DFE)],
+    iqGenius: [Color(0xFF36A8FA), Color(0xFFA35DF4), Color(0xFFE4EDFC)],
     particleTints: [
+      Color(0xFF36A8FA),
+      Color(0xFFA35DF4),
+      Color(0xFF1948E0),
+      Color(0xFFE4EDFC),
       Color(0xFFFFD700),
-      Color(0xFFB388FF),
-      Color(0xFF80DEEA),
-      Color(0xFFFF80AB),
       Color(0xFFFFFFFF),
-      Color(0xFF00E5FF),
     ],
-    cellSurface: Color(0xFF15121D),
-    cellPeer: Color(0xFF231C36),
-    cellSameDigit: Color(0xFF3F2A6E),
-    cellSelected: Color(0xFF7C4DFF),
-    cellSelectedFg: Color(0xFFFFFFFF),
-    cellWrong: Color(0xFF5C1F2E),
-    cellWrongFg: Color(0xFFFFB4BF),
-    cellGivenDigit: Color(0xFFF5F2FF),
-    cellUserDigit: Color(0xFFCBB5FF),
-    cellSameDigitFg: Color(0xFFFFFFFF),
-    boardLine: Color(0xFF2A2438),
-    boardLineThick: Color(0xFF6A5A8A),
+    cellSurface: Color(0xFF0A1230),
+    cellPeer: Color(0xFF152459),
+    cellSameDigit: Color(0xFF1948E0),
+    cellSelected: Color(0xFF36A8FA),
+    cellSelectedFg: Color(0xFF01072D),
+    cellWrong: Color(0xFF4A1430),
+    cellWrongFg: Color(0xFFFFB0C4),
+    cellGivenDigit: Color(0xFFE4EDFC),
+    cellUserDigit: Color(0xFF36A8FA),
+    cellSameDigitFg: Color(0xFFE4EDFC),
+    boardLine: Color(0xFF1A2454),
+    boardLineThick: Color(0xFF36A8FA),
   );
 
   static const light = AppPalette(
