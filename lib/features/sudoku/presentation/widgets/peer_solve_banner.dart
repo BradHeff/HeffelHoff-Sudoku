@@ -51,8 +51,9 @@ class PeerSolveBanner extends StatelessWidget {
         .animate()
         .slideY(begin: -0.4, end: 0, duration: 350.ms, curve: Curves.easeOutCubic)
         .fadeIn(duration: 250.ms)
-        .then(delay: 1800.ms)
-        .fadeOut(duration: 350.ms)
-        .slideY(begin: 0, end: -0.2, duration: 350.ms);
+        // Stay visible long enough to actually read at puzzle start.
+        .then(delay: 10000.ms)
+        .fadeOut(duration: 400.ms)
+        .slideY(begin: 0, end: -0.2, duration: 400.ms);
   }
 }

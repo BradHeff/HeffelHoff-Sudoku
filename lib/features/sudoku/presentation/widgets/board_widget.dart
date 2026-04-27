@@ -12,11 +12,18 @@ class BoardWidget extends StatelessWidget {
     required this.board,
     required this.selected,
     required this.onCellTap,
+    this.celebrateDigit,
+    this.celebrateKey,
   });
 
   final Board board;
   final ({int row, int col})? selected;
   final void Function(int row, int col) onCellTap;
+
+  /// Set during a digit-complete celebration. Cells matching this digit
+  /// play a one-shot shimmer keyed on [celebrateKey].
+  final int? celebrateDigit;
+  final Object? celebrateKey;
 
   @override
   Widget build(BuildContext context) {
@@ -69,6 +76,9 @@ class BoardWidget extends StatelessWidget {
                                 !(selected != null &&
                                     selected!.row == r &&
                                     selected!.col == c),
+                            celebrate: celebrateDigit != null &&
+                                board.at(r, c).value == celebrateDigit,
+                            celebrateKey: celebrateKey,
                             onTap: () => onCellTap(r, c),
                           ),
                         ),

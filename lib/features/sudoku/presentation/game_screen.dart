@@ -9,6 +9,7 @@ import '../domain/difficulty.dart';
 import '../domain/game_state.dart';
 import 'post_game_iq_screen.dart';
 import 'widgets/board_widget.dart';
+import 'widgets/digit_complete_overlay.dart';
 import 'widgets/lives_row.dart';
 import 'widgets/number_pad.dart';
 import 'widgets/peer_solve_banner.dart';
@@ -114,81 +115,116 @@ class _ErrorView extends StatelessWidget {
   }
 }
 
-class _OngoingView extends StatelessWidget {
+class _OngoingView extends StatefulWidget {
   const _OngoingView({required this.state, required this.controller});
 
   final GameOngoing state;
   final GameController controller;
 
   @override
-  Widget build(BuildContext context) {
-    final hintsRemaining = (kHintCapFree - state.hintsUsed).clamp(0, kHintCapFree);
+  State<_OngoingView> createState() => _OngoingViewState();
+}
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      child: Column(
-        children: [
-          _Header(
-            difficulty: state.difficulty,
-            onPause: () => controller.setPaused(!state.paused),
-            paused: state.paused,
-          ),
-          const SizedBox(height: 8),
-          // Stats row: lives | mistakes-star | timer
-          _StatsRow(
-            lives: state.lives,
-            maxLives: state.maxLives,
-            mistakes: state.mistakes,
-            elapsed: state.elapsed,
-            paused: state.paused,
-          ),
-          const SizedBox(height: 12),
-          // Phase 1: peer-solve banner placeholder. Phase 5 passes real %.
-          const PeerSolveBanner(solveRatePercent: null),
-          const SizedBox(height: 12),
-          // The board.
-          BoardWidget(
-            board: state.board,
-            selected: state.selected,
-            onCellTap: (r, c) {
-              HapticFeedback.selectionClick();
-              controller.selectCell(r, c);
-            },
-          ),
-          const SizedBox(height: 16),
-          _ToolsRow(
-            pencilOn: state.pencilMode,
-            hintsRemaining: hintsRemaining,
-            onErase: () {
-              HapticFeedback.lightImpact();
-              controller.erase();
-            },
-            onPencil: () {
-              HapticFeedback.selectionClick();
-              controller.togglePencil();
-            },
-            onHint: hintsRemaining > 0
-                ? () {
-                    HapticFeedback.mediumImpact();
-                    controller.useHint();
+class _OngoingViewState extends State<_OngoingView> {
+  DateTime? _lastFiredCelebration;
+
+  @override
+  void didUpdateWidget(covariant _OngoingView old) {
+    super.didUpdateWidget(old);
+    final at = widget.state.lastCompletedAt;
+    if (at != null && at != _lastFiredCelebration) {
+      _lastFiredCelebration = at;
+      // Success haptic pattern for the wow moment.
+      HapticFeedback.heavyImpact();
+      Future<void>.delayed(const Duration(milliseconds: 120), HapticFeedback.mediumImpact);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = widget.state;
+    final controller = widget.controller;
+    final hintsRemaining = (kHintCapFree - state.hintsUsed).clamp(0, kHintCapFree);
+    final celebrateDigit = state.lastCompletedDigit;
+    final celebrateKey = state.lastCompletedAt;
+
+    return Stack(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Column(
+            children: [
+              _Header(
+                difficulty: state.difficulty,
+                onPause: () => controller.setPaused(!state.paused),
+                paused: state.paused,
+              ),
+              const SizedBox(height: 8),
+              _StatsRow(
+                lives: state.lives,
+                maxLives: state.maxLives,
+                mistakes: state.mistakes,
+                elapsed: state.elapsed,
+                paused: state.paused,
+              ),
+              const SizedBox(height: 12),
+              const PeerSolveBanner(solveRatePercent: null),
+              const SizedBox(height: 12),
+              BoardWidget(
+                board: state.board,
+                selected: state.selected,
+                celebrateDigit: celebrateDigit,
+                celebrateKey: celebrateKey,
+                onCellTap: (r, c) {
+                  HapticFeedback.selectionClick();
+                  controller.selectCell(r, c);
+                },
+              ),
+              const SizedBox(height: 16),
+              _ToolsRow(
+                pencilOn: state.pencilMode,
+                hintsRemaining: hintsRemaining,
+                onErase: () {
+                  HapticFeedback.lightImpact();
+                  controller.erase();
+                },
+                onPencil: () {
+                  HapticFeedback.selectionClick();
+                  controller.togglePencil();
+                },
+                onHint: hintsRemaining > 0
+                    ? () {
+                        HapticFeedback.mediumImpact();
+                        controller.useHint();
+                      }
+                    : null,
+              ),
+              const SizedBox(height: 12),
+              NumberPad(
+                board: state.board,
+                disabled: state.paused,
+                celebrateDigit: celebrateDigit,
+                celebrateKey: celebrateKey,
+                onDigit: (d) async {
+                  final ok = controller.enterDigit(d);
+                  if (ok) {
+                    await HapticFeedback.mediumImpact();
+                  } else {
+                    await HapticFeedback.heavyImpact();
                   }
-                : null,
+                },
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          NumberPad(
-            board: state.board,
-            disabled: state.paused,
-            onDigit: (d) async {
-              final ok = controller.enterDigit(d);
-              if (ok) {
-                await HapticFeedback.mediumImpact();
-              } else {
-                await HapticFeedback.heavyImpact();
-              }
-            },
+        ),
+        if (celebrateDigit != null && celebrateKey != null)
+          Positioned.fill(
+            child: DigitCompleteOverlay(
+              digit: celebrateDigit,
+              triggeredAt: celebrateKey,
+            ),
           ),
-        ],
-      ),
+      ],
     );
   }
 }
