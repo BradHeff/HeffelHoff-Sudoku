@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../domain/cell.dart';
 
@@ -33,33 +34,41 @@ class CellWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Theme.of(context).extension<AppPalette>()!;
     final scheme = Theme.of(context).colorScheme;
 
+    // State priority: wrong > selected > same-digit > peer > base.
+    // Givens and empty cells share [cellSurface] — distinguished only by
+    // font weight + color — so the board doesn't look speckled.
     final Color background;
     if (cell.isWrong) {
-      background = scheme.errorContainer;
+      background = palette.cellWrong;
     } else if (isSelected) {
-      background = scheme.secondaryContainer;
+      background = palette.cellSelected;
     } else if (isSameDigitHighlighted) {
-      background = scheme.tertiaryContainer.withValues(alpha: 0.45);
+      background = palette.cellSameDigit;
     } else if (isPeerHighlighted) {
-      background = scheme.surfaceContainerLow;
-    } else if (cell.isGiven) {
-      background = scheme.surfaceContainerHigh;
+      background = palette.cellPeer;
     } else {
-      background = scheme.surface;
+      background = palette.cellSurface;
     }
 
     final Color digitColor;
     final bool digitBold;
     if (cell.isWrong) {
-      digitColor = scheme.onErrorContainer;
+      digitColor = palette.cellWrongFg;
+      digitBold = true;
+    } else if (isSelected && cell.value != 0) {
+      digitColor = palette.cellSelectedFg;
+      digitBold = true;
+    } else if (isSameDigitHighlighted) {
+      digitColor = palette.cellSameDigitFg;
       digitBold = true;
     } else if (cell.isGiven) {
-      digitColor = scheme.onSurface;
+      digitColor = palette.cellGivenDigit;
       digitBold = true;
     } else {
-      digitColor = scheme.primary;
+      digitColor = palette.cellUserDigit;
       digitBold = false;
     }
 
@@ -81,8 +90,8 @@ class CellWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: background,
         border: Border(
-          right: BorderSide(color: scheme.outlineVariant, width: 0.5),
-          bottom: BorderSide(color: scheme.outlineVariant, width: 0.5),
+          right: BorderSide(color: palette.boardLine, width: 0.5),
+          bottom: BorderSide(color: palette.boardLine, width: 0.5),
         ),
       ),
       alignment: Alignment.center,

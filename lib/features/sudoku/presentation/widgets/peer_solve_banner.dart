@@ -24,25 +24,31 @@ class PeerSolveBanner extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: scheme.primary,
+        color: scheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: scheme.primary.withValues(alpha: 0.35),
+          width: 1,
+        ),
       ),
       child: Column(
         children: [
           Text(
             '$pct%',
             style: text.headlineMedium?.copyWith(
-              color: scheme.tertiary,
+              color: scheme.primary,
               fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
             ),
           ),
+          const SizedBox(height: 2),
           Text(
             solveRatePercent == null
                 ? 'Be one of the first to solve this puzzle'
                 : 'of players have solved this puzzle',
-            style: text.bodyMedium?.copyWith(color: scheme.onPrimary),
+            style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
             textAlign: TextAlign.center,
           ),
         ],
