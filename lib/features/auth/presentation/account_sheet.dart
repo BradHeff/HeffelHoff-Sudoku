@@ -56,6 +56,7 @@ class _SignInForm extends ConsumerStatefulWidget {
 }
 
 class _SignInFormState extends ConsumerState<_SignInForm> {
+  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isSignUp = false;
@@ -64,14 +65,24 @@ class _SignInFormState extends ConsumerState<_SignInForm> {
 
   @override
   void dispose() {
+    _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
+    final username = _usernameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text;
+
+    if (_isSignUp) {
+      final usernameErr = ProfileRepository.validateUsername(username);
+      if (usernameErr != null) {
+        setState(() => _error = usernameErr);
+        return;
+      }
+    }
     if (email.isEmpty || password.length < 6) {
       setState(() => _error = 'Enter an email and a password (≥6 chars).');
       return;
@@ -80,12 +91,26 @@ class _SignInFormState extends ConsumerState<_SignInForm> {
       _busy = true;
       _error = null;
     });
-    final repo = ref.read(authRepositoryProvider);
+    final auth = ref.read(authRepositoryProvider);
     try {
       if (_isSignUp) {
-        await repo.signUpWithEmail(email: email, password: password);
+        final response = await auth.signUpWithEmail(email: email, password: password);
+        final user = response.user;
+        if (user != null) {
+          try {
+            await ref.read(profileRepositoryProvider).updateDisplayName(
+                  userId: user.id,
+                  name: username,
+                );
+          } catch (_) {
+            // RLS may block the write before email confirmation; the
+            // user can finish setting their username from the account
+            // sheet once signed in.
+          }
+          ref.invalidate(currentProfileProvider);
+        }
       } else {
-        await repo.signInWithEmail(email: email, password: password);
+        await auth.signInWithEmail(email: email, password: password);
       }
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -148,11 +173,32 @@ class _SignInFormState extends ConsumerState<_SignInForm> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Save your IQ across devices and climb the leaderboard.',
+          _isSignUp
+              ? 'Pick a username — it\'s what others see on the '
+                  'leaderboard. Your email stays private.'
+              : 'Save your IQ across devices and climb the leaderboard.',
           style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
+        if (_isSignUp) ...[
+          TextField(
+            controller: _usernameController,
+            maxLength: 24,
+            autocorrect: false,
+            enableSuggestions: false,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(
+              labelText: 'Username',
+              hintText: 'How others will know you',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.badge_outlined),
+              counterText: '',
+            ),
+            enabled: !_busy,
+          ),
+          const SizedBox(height: 12),
+        ],
         TextField(
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,
