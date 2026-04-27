@@ -126,98 +126,123 @@ class _PostGameIqScreenState extends State<PostGameIqScreen> {
 
     return Stack(
       children: [
-        Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 24),
-              Text(
-                headlineText,
-                textAlign: TextAlign.center,
-                style: text.titleMedium?.copyWith(
-                  color: headlineColor,
-                  letterSpacing: 4,
-                  fontWeight: genius ? FontWeight.w900 : FontWeight.w600,
-                ),
-              ).animate().fadeIn(duration: 400.ms),
-              if (genius)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    'Solved under target time',
-                    textAlign: TextAlign.center,
-                    style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-                  ).animate(delay: 200.ms).fadeIn(duration: 400.ms),
-                ),
-              const SizedBox(height: 8),
-              // Big IQ number — count-up animation, with optional gold
-              // pulsing glow ring on genius runs.
-              Center(
-                child: Stack(
-                  alignment: Alignment.center,
+        // Body in a Column with the celebration content scrolling if
+        // needed, and the action buttons pinned to the bottom of the
+        // view so they're always tappable.
+        Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (genius)
-                      Container(
-                        width: 220,
-                        height: 220,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: RadialGradient(
-                            colors: [
-                              palette.goldFrame.first.withValues(alpha: 0.45),
-                              palette.goldFrame.first.withValues(alpha: 0),
-                            ],
-                          ),
-                        ),
-                      )
-                          .animate(onPlay: (c) => c.repeat(reverse: true))
-                          .scaleXY(end: 1.08, duration: 1100.ms, curve: Curves.easeInOut),
-                    TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0, end: widget.iqScore.toDouble()),
-                      duration: const Duration(milliseconds: 1400),
-                      curve: Curves.easeOutCubic,
-                      builder: (context, value, _) => Text(
-                        value.round().toString(),
-                        style: iqDisplayStyle(context, size: genius ? 112 : 96).copyWith(
-                          foreground: Paint()
-                            ..shader = LinearGradient(
-                              colors: iqGradient,
-                            ).createShader(const Rect.fromLTWH(0, 0, 240, 120)),
-                        ),
+                    Text(
+                      headlineText,
+                      textAlign: TextAlign.center,
+                      style: text.titleMedium?.copyWith(
+                        color: headlineColor,
+                        letterSpacing: 4,
+                        fontWeight: genius ? FontWeight.w900 : FontWeight.w600,
                       ),
+                    ).animate().fadeIn(duration: 400.ms),
+                    if (genius)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Solved under target time',
+                          textAlign: TextAlign.center,
+                          style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                        ).animate(delay: 200.ms).fadeIn(duration: 400.ms),
+                      ),
+                    const SizedBox(height: 8),
+                    Center(
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          if (genius)
+                            Container(
+                              width: 220,
+                              height: 220,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: RadialGradient(
+                                  colors: [
+                                    palette.goldFrame.first.withValues(alpha: 0.45),
+                                    palette.goldFrame.first.withValues(alpha: 0),
+                                  ],
+                                ),
+                              ),
+                            )
+                                .animate(onPlay: (c) => c.repeat(reverse: true))
+                                .scaleXY(end: 1.08, duration: 1100.ms, curve: Curves.easeInOut),
+                          TweenAnimationBuilder<double>(
+                            tween: Tween(begin: 0, end: widget.iqScore.toDouble()),
+                            duration: const Duration(milliseconds: 1400),
+                            curve: Curves.easeOutCubic,
+                            builder: (context, value, _) => Text(
+                              value.round().toString(),
+                              style: iqDisplayStyle(context, size: genius ? 112 : 96).copyWith(
+                                foreground: Paint()
+                                  ..shader = LinearGradient(
+                                    colors: iqGradient,
+                                  ).createShader(const Rect.fromLTWH(0, 0, 240, 120)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text('IQ', textAlign: TextAlign.center, style: text.titleMedium),
+                    const SizedBox(height: 20),
+                    _EinsteinBar(
+                      iqScore: widget.iqScore,
+                      palette: palette,
+                      gradient: iqGradient,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      headline,
+                      textAlign: TextAlign.center,
+                      style: text.bodyLarge?.copyWith(color: scheme.onSurface),
+                    ).animate(delay: 1200.ms).fadeIn(),
+                    const SizedBox(height: 24),
+                    _StatTile(label: 'Time', value: '$mins:$secs'),
+                    _StatTile(
+                      label: 'Target',
+                      value: _fmtTarget(widget.puzzle.difficulty.targetTimeSeconds),
+                    ),
+                    _StatTile(label: 'Mistakes', value: '${widget.mistakes}'),
+                    _StatTile(label: 'Hints used', value: '${widget.hintsUsed}'),
+                    _StatTile(label: 'Difficulty', value: widget.puzzle.difficulty.label),
+                  ],
+                ),
+              ),
+            ),
+            // Pinned footer with the action buttons. SafeArea handles
+            // the gesture-bar inset on Android navigation pill.
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    FilledButton(
+                      onPressed: widget.onPlayAgain,
+                      child: const Text('Play again'),
+                    ),
+                    const SizedBox(height: 4),
+                    TextButton(
+                      onPressed: widget.onBackToStart,
+                      child: const Text('Back to start'),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 8),
-              Text('IQ', textAlign: TextAlign.center, style: text.titleMedium),
-              const SizedBox(height: 24),
-              _EinsteinBar(iqScore: widget.iqScore, palette: palette, gradient: iqGradient),
-              const SizedBox(height: 16),
-              Text(
-                headline,
-                textAlign: TextAlign.center,
-                style: text.bodyLarge?.copyWith(color: scheme.onSurface),
-              ).animate(delay: 1200.ms).fadeIn(),
-              const SizedBox(height: 32),
-              _StatTile(label: 'Time', value: '$mins:$secs'),
-              _StatTile(
-                label: 'Target',
-                value: _fmtTarget(widget.puzzle.difficulty.targetTimeSeconds),
-              ),
-              _StatTile(label: 'Mistakes', value: '${widget.mistakes}'),
-              _StatTile(label: 'Hints used', value: '${widget.hintsUsed}'),
-              _StatTile(label: 'Difficulty', value: widget.puzzle.difficulty.label),
-              const Spacer(),
-              FilledButton(onPressed: widget.onPlayAgain, child: const Text('Play again')),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: widget.onBackToStart,
-                child: const Text('Back to start'),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
         Align(
           alignment: Alignment.topCenter,
