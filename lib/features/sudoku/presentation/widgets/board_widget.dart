@@ -13,7 +13,11 @@ class BoardWidget extends StatelessWidget {
     required this.board,
     required this.selected,
     required this.onCellTap,
+    this.highlightedDigit,
     this.celebrateDigit,
+    this.celebrateRow,
+    this.celebrateCol,
+    this.celebrateBox,
     this.celebrateKey,
   });
 
@@ -21,17 +25,36 @@ class BoardWidget extends StatelessWidget {
   final ({int row, int col})? selected;
   final void Function(int row, int col) onCellTap;
 
-  /// Set during a digit-complete celebration. Cells matching this digit
-  /// play a one-shot shimmer keyed on [celebrateKey].
+  /// Digit being highlighted across the whole board (every matching cell
+  /// gets the same-digit wash). When non-null, overrides the
+  /// derive-from-selection behavior.
+  final int? highlightedDigit;
+
+  /// Cells matching any of these structures play a one-shot golden
+  /// shimmer keyed on [celebrateKey]. A single placement can fire any
+  /// combination of the four (e.g. row+col+box on a corner cell that
+  /// also happened to be the 9th instance of its digit).
   final int? celebrateDigit;
+  final int? celebrateRow;
+  final int? celebrateCol;
+  final int? celebrateBox;
   final Object? celebrateKey;
+
+  bool _shouldCelebrate(int r, int c, int value) {
+    if (celebrateDigit != null && value == celebrateDigit) return true;
+    if (celebrateRow != null && r == celebrateRow) return true;
+    if (celebrateCol != null && c == celebrateCol) return true;
+    if (celebrateBox != null && (r ~/ 3) * 3 + (c ~/ 3) == celebrateBox) return true;
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {
     final palette = Theme.of(context).extension<AppPalette>()!;
-    final selectedDigit = selected == null
-        ? 0
-        : board.at(selected!.row, selected!.col).value;
+    // Highlight digit: caller-provided takes priority (persists through
+    // empty-cell taps). Fall back to the value of the selected cell.
+    final selectedDigit = highlightedDigit ??
+        (selected == null ? 0 : board.at(selected!.row, selected!.col).value);
     final selBox = selected == null
         ? -1
         : (selected!.row ~/ 3) * 3 + (selected!.col ~/ 3);
@@ -77,8 +100,7 @@ class BoardWidget extends StatelessWidget {
                                 !(selected != null &&
                                     selected!.row == r &&
                                     selected!.col == c),
-                            celebrate: celebrateDigit != null &&
-                                board.at(r, c).value == celebrateDigit,
+                            celebrate: _shouldCelebrate(r, c, board.at(r, c).value),
                             celebrateKey: celebrateKey,
                             onTap: () => onCellTap(r, c),
                           ),

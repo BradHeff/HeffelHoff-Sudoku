@@ -34,7 +34,11 @@ class GameOngoing extends GameState {
     required this.pencilMode,
     required this.paused,
     this.lastCompletedDigit,
+    this.lastCompletedRow,
+    this.lastCompletedCol,
+    this.lastCompletedBox,
     this.lastCompletedAt,
+    this.highlightedDigit,
   });
 
   final Puzzle puzzle;
@@ -57,10 +61,38 @@ class GameOngoing extends GameState {
   /// after the celebration animation finishes (~1500ms).
   final int? lastCompletedDigit;
 
-  /// Monotonic timestamp the celebration was triggered. Used as a
-  /// keying value so animations re-fire if the same digit is somehow
-  /// completed twice (e.g. erase-then-replace).
+  /// Set (0..8) when a row was just completed by the placement.
+  final int? lastCompletedRow;
+
+  /// Set (0..8) when a column was just completed by the placement.
+  final int? lastCompletedCol;
+
+  /// Set (0..8) when a 3×3 box was just completed. Box index runs
+  /// left→right, top→bottom: top row of boxes is 0,1,2; middle 3,4,5;
+  /// bottom 6,7,8.
+  final int? lastCompletedBox;
+
+  /// Monotonic timestamp the celebration was triggered. Shared across
+  /// all four `lastCompleted*` fields so a single placement that
+  /// completes (e.g.) a digit + a row + a box uses one keying value.
   final DateTime? lastCompletedAt;
+
+  /// The digit currently being highlighted across the board (every cell
+  /// with this value gets the same-digit wash). Decoupled from
+  /// [selected] so the highlight survives a tap on an empty cell —
+  /// users often tap an empty cell *intending* to enter the highlighted
+  /// digit there. Cleared when:
+  ///   - the user taps a second empty cell without entering a digit
+  ///     between the two taps (lost intent), or
+  ///   - the user enters a digit (the just-placed digit becomes the
+  ///     new highlight).
+  final int? highlightedDigit;
+
+  bool get hasAnyCompletion =>
+      lastCompletedDigit != null ||
+      lastCompletedRow != null ||
+      lastCompletedCol != null ||
+      lastCompletedBox != null;
 
   bool get hasLives => lives > 0;
   Difficulty get difficulty => puzzle.difficulty;
@@ -76,8 +108,13 @@ class GameOngoing extends GameState {
     bool? pencilMode,
     bool? paused,
     int? lastCompletedDigit,
+    int? lastCompletedRow,
+    int? lastCompletedCol,
+    int? lastCompletedBox,
     DateTime? lastCompletedAt,
     bool clearLastCompleted = false,
+    int? highlightedDigit,
+    bool clearHighlight = false,
   }) {
     return GameOngoing(
       puzzle: puzzle,
@@ -93,8 +130,16 @@ class GameOngoing extends GameState {
       paused: paused ?? this.paused,
       lastCompletedDigit:
           clearLastCompleted ? null : (lastCompletedDigit ?? this.lastCompletedDigit),
+      lastCompletedRow:
+          clearLastCompleted ? null : (lastCompletedRow ?? this.lastCompletedRow),
+      lastCompletedCol:
+          clearLastCompleted ? null : (lastCompletedCol ?? this.lastCompletedCol),
+      lastCompletedBox:
+          clearLastCompleted ? null : (lastCompletedBox ?? this.lastCompletedBox),
       lastCompletedAt:
           clearLastCompleted ? null : (lastCompletedAt ?? this.lastCompletedAt),
+      highlightedDigit:
+          clearHighlight ? null : (highlightedDigit ?? this.highlightedDigit),
     );
   }
 }
@@ -107,6 +152,7 @@ class GameWon extends GameState {
     required this.hintsUsed,
     required this.livesRemaining,
     required this.iqScore,
+    required this.wasUnderTarget,
   });
 
   final Puzzle puzzle;
@@ -117,6 +163,12 @@ class GameWon extends GameState {
 
   /// Provisional client-side IQ. Will be overwritten by server on sync.
   final int iqScore;
+
+  /// True when the puzzle was solved in less than the tier's
+  /// `target_time_seconds`. Triggers the "GENIUS" enhanced celebration
+  /// on the post-game screen — bigger confetti, gold IQ glow,
+  /// extended particle storm, longer audio fanfare.
+  final bool wasUnderTarget;
 }
 
 class GameLost extends GameState {
