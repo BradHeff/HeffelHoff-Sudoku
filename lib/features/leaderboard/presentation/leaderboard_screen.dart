@@ -9,6 +9,7 @@ import '../../sudoku/domain/difficulty.dart';
 import '../data/leaderboard_repository.dart';
 import '../domain/leaderboard_entry.dart';
 import 'widgets/leaderboard_header.dart';
+import 'widgets/legendary_rosette.dart';
 import 'widgets/rank_rosette.dart';
 
 /// Optional payload passed via `context.go('/leaderboard', extra: ...)`
@@ -252,20 +253,19 @@ class _RankRow extends StatelessWidget {
     final mins = (entry.bestTimeSeconds ~/ 60).toString().padLeft(2, '0');
     final secs = (entry.bestTimeSeconds % 60).toString().padLeft(2, '0');
 
-    // Rosette tinting: gold/silver/bronze for top 3, otherwise primary
-    // (or a neutral surface for non-current-user ranks 4+).
-    final Color rosetteColor;
-    if (rank == 1) {
-      rosetteColor = palette.goldFrame.first;
-    } else if (rank == 2) {
-      rosetteColor = palette.silverFrame.first;
-    } else if (rank == 3) {
-      rosetteColor = palette.bronzeFrame.first;
-    } else if (isCurrentUser) {
-      rosetteColor = scheme.primary;
-    } else {
-      rosetteColor = scheme.surfaceContainerHigh;
-    }
+    // Top-3 use the LegendaryRosette (gold/silver/bronze with animated
+    // gradient ring + particle aura + crown for rank 1). Ranks 4+ use
+    // the plain RankRosette in either primary cyan (current user) or
+    // a neutral surface.
+    final isTopThree = rank <= 3;
+    final List<Color> topGradient = switch (rank) {
+      1 => palette.goldFrame,
+      2 => palette.silverFrame,
+      3 => palette.bronzeFrame,
+      _ => [scheme.primary, scheme.primary],
+    };
+    final Color rosetteColor =
+        isCurrentUser ? scheme.primary : scheme.surfaceContainerHigh;
 
     Widget iqText;
     if (arrival != null) {
@@ -299,7 +299,10 @@ class _RankRow extends StatelessWidget {
 
     Widget row = Container(
       margin: const EdgeInsets.symmetric(vertical: 3),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      padding: EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: isTopThree ? 12 : 8,
+      ),
       decoration: BoxDecoration(
         color: isCurrentUser
             ? scheme.primary.withValues(alpha: 0.18)
@@ -312,25 +315,45 @@ class _RankRow extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 40,
+            width: isTopThree ? 72 : 40,
             child: Center(
-              child: RankRosette(
-                rank: rank,
-                size: 32,
-                color: rosetteColor,
-                highlight: isCurrentUser,
-              ),
+              child: isTopThree
+                  ? LegendaryRosette(
+                      rank: rank,
+                      gradient: topGradient,
+                      size: 56,
+                      isCurrentUser: isCurrentUser,
+                    )
+                  : RankRosette(
+                      rank: rank,
+                      size: 32,
+                      color: rosetteColor,
+                      highlight: isCurrentUser,
+                    ),
             ),
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              entry.displayName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: text.bodyMedium?.copyWith(
-                fontWeight: isCurrentUser ? FontWeight.w800 : FontWeight.w500,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isTopThree)
+                  _TierLabelPill(
+                    label: LegendaryRosette.tierLabel(rank),
+                    gradient: topGradient,
+                  ),
+                Text(
+                  entry.displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.bodyMedium?.copyWith(
+                    fontWeight: isCurrentUser || isTopThree
+                        ? FontWeight.w800
+                        : FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ),
           SizedBox(width: 60, child: iqText),
@@ -358,6 +381,40 @@ class _RankRow extends StatelessWidget {
     }
 
     return row;
+  }
+}
+
+class _TierLabelPill extends StatelessWidget {
+  const _TierLabelPill({required this.label, required this.gradient});
+
+  final String label;
+  final List<Color> gradient;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: gradient),
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: [
+          BoxShadow(
+            color: gradient.first.withValues(alpha: 0.45),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Color(0xFF21140A),
+          fontWeight: FontWeight.w900,
+          fontSize: 9,
+          letterSpacing: 1.5,
+        ),
+      ),
+    );
   }
 }
 
