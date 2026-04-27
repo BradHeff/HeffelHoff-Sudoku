@@ -137,19 +137,32 @@ class _PencilGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = TextStyle(fontSize: 9, color: color);
+    final style = TextStyle(
+      fontSize: 11,
+      color: color,
+      height: 1.0,
+      fontWeight: FontWeight.w600,
+    );
     return Padding(
       padding: const EdgeInsets.all(2),
-      child: GridView.count(
-        crossAxisCount: 3,
-        physics: const NeverScrollableScrollPhysics(),
-        shrinkWrap: true,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          for (var d = 1; d <= 9; d++)
-            Center(
-              child: (mask >> (d - 1)) & 1 == 1
-                  ? Text('$d', style: style)
-                  : const SizedBox.shrink(),
+          for (var row = 0; row < 3; row++)
+            Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  for (var col = 0; col < 3; col++)
+                    Expanded(
+                      child: Center(
+                        child: (mask >> (row * 3 + col)) & 1 == 1
+                            ? Text('${row * 3 + col + 1}', style: style)
+                            : const SizedBox.shrink(),
+                      ),
+                    ),
+                ],
+              ),
             ),
         ],
       ),

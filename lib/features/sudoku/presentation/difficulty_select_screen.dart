@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../auth/data/auth_repository.dart';
+import '../../auth/presentation/account_sheet.dart';
 import '../domain/difficulty.dart';
 
 class DifficultySelectScreen extends ConsumerWidget {
@@ -72,6 +74,7 @@ class DifficultySelectScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  const _AccountAvatarButton(),
                 ],
               ),
               const SizedBox(height: 12),
@@ -172,5 +175,60 @@ class _DifficultyCard extends StatelessWidget {
     final m = seconds ~/ 60;
     final s = seconds % 60;
     return s == 0 ? '${m}m' : '${m}m ${s}s';
+  }
+}
+
+/// Avatar button on the home screen header. Shows the first letter of
+/// the signed-in user's email (or a person icon if anonymous / not
+/// signed in) and opens the [showAccountSheet] modal on tap.
+class _AccountAvatarButton extends ConsumerWidget {
+  const _AccountAvatarButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authStateProvider);
+    final scheme = Theme.of(context).colorScheme;
+
+    final user = auth.asData?.value;
+    final email = user?.email ?? '';
+    final isAnonymous = user?.isAnonymous == true;
+    final hasInitial = !isAnonymous && email.isNotEmpty;
+
+    return Material(
+      color: scheme.surfaceContainerHigh,
+      shape: const CircleBorder(),
+      child: InkWell(
+        onTap: () => showAccountSheet(context),
+        customBorder: const CircleBorder(),
+        child: Container(
+          width: 44,
+          height: 44,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: user != null
+                  ? scheme.primary.withValues(alpha: 0.7)
+                  : scheme.outlineVariant,
+              width: 1.5,
+            ),
+          ),
+          child: hasInitial
+              ? Text(
+                  email[0].toUpperCase(),
+                  style: TextStyle(
+                    color: scheme.primary,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18,
+                  ),
+                )
+              : Icon(
+                  Icons.person_outline,
+                  color: user != null ? scheme.primary : scheme.onSurfaceVariant,
+                  size: 22,
+                ),
+        ),
+      ),
+    );
   }
 }
