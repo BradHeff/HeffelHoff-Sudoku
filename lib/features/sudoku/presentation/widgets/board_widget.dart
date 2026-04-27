@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_colors.dart';
 import '../../domain/board.dart';
 import 'cell_widget.dart';
 
@@ -27,7 +28,7 @@ class BoardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final palette = Theme.of(context).extension<AppPalette>()!;
     final selectedDigit = selected == null
         ? 0
         : board.at(selected!.row, selected!.col).value;
@@ -39,8 +40,8 @@ class BoardWidget extends StatelessWidget {
       aspectRatio: 1,
       child: Container(
         decoration: BoxDecoration(
-          color: scheme.surface,
-          border: Border.all(color: scheme.outline, width: 2),
+          color: palette.cellSurface,
+          border: Border.all(color: palette.boardLineThick, width: 2),
           borderRadius: BorderRadius.circular(12),
         ),
         clipBehavior: Clip.antiAlias,
@@ -56,10 +57,10 @@ class BoardWidget extends StatelessWidget {
                           decoration: BoxDecoration(
                             border: Border(
                               right: c == 2 || c == 5
-                                  ? BorderSide(color: scheme.outline, width: 1.5)
+                                  ? BorderSide(color: palette.boardLineThick, width: 1.5)
                                   : BorderSide.none,
                               bottom: r == 2 || r == 5
-                                  ? BorderSide(color: scheme.outline, width: 1.5)
+                                  ? BorderSide(color: palette.boardLineThick, width: 1.5)
                                   : BorderSide.none,
                             ),
                           ),

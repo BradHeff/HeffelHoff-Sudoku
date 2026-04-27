@@ -2,7 +2,19 @@ import 'package:flutter/material.dart';
 
 /// Custom theme extension for game-specific tokens that don't map cleanly
 /// to a Material 3 ColorScheme role: podium frames, life heart, IQ-genius
-/// gradient, and the persistent particle layer's tint palette.
+/// gradient, the persistent particle palette, and — most importantly —
+/// hand-tuned Sudoku cell-state surface + foreground colors.
+///
+/// We deliberately bypass `ColorScheme.surfaceContainerLow/High/...` for
+/// cell states because the auto-generated tonal palette is too subtle on
+/// dark themes — selected/peer/same-digit shades all collapse into
+/// near-identical greys. The tokens below are picked manually for clear
+/// visual hierarchy:
+///
+///   wrong > selected  >  sameDigit  >  peer  >  surface
+///
+/// Givens and empty cells share the same surface (distinguished only by
+/// font weight) to avoid a "checkerboard" speckle effect on the board.
 class AppPalette extends ThemeExtension<AppPalette> {
   const AppPalette({
     required this.goldFrame,
@@ -12,6 +24,18 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.lifeRedFaded,
     required this.iqGenius,
     required this.particleTints,
+    required this.cellSurface,
+    required this.cellPeer,
+    required this.cellSameDigit,
+    required this.cellSelected,
+    required this.cellSelectedFg,
+    required this.cellWrong,
+    required this.cellWrongFg,
+    required this.cellGivenDigit,
+    required this.cellUserDigit,
+    required this.cellSameDigitFg,
+    required this.boardLine,
+    required this.boardLineThick,
   });
 
   final List<Color> goldFrame;
@@ -21,6 +45,43 @@ class AppPalette extends ThemeExtension<AppPalette> {
   final Color lifeRedFaded;
   final List<Color> iqGenius;
   final List<Color> particleTints;
+
+  /// Default board cell background (used for both empty and given cells).
+  final Color cellSurface;
+
+  /// Wash applied to all cells in the same row, column, or 3×3 box as
+  /// the selected cell. Subtle but visibly different from [cellSurface].
+  final Color cellPeer;
+
+  /// Background for cells whose value matches the selected cell's value.
+  /// Stronger than [cellPeer], a different hue from [cellSelected] so
+  /// the two states are unambiguously distinct.
+  final Color cellSameDigit;
+
+  /// The currently-focused cell. Loudest non-error state.
+  final Color cellSelected;
+
+  /// Digit colour on a [cellSelected] background.
+  final Color cellSelectedFg;
+
+  /// Wrong-entry cell.
+  final Color cellWrong;
+  final Color cellWrongFg;
+
+  /// Original puzzle clues (immutable, bold).
+  final Color cellGivenDigit;
+
+  /// Player-placed correct digits.
+  final Color cellUserDigit;
+
+  /// Digit colour when the cell is part of the same-digit highlight.
+  final Color cellSameDigitFg;
+
+  /// Thin lines between cells.
+  final Color boardLine;
+
+  /// Thick lines between 3×3 boxes.
+  final Color boardLineThick;
 
   static const dark = AppPalette(
     goldFrame: [Color(0xFFFFD700), Color(0xFFFFA500)],
@@ -37,6 +98,18 @@ class AppPalette extends ThemeExtension<AppPalette> {
       Color(0xFFFFFFFF),
       Color(0xFF00E5FF),
     ],
+    cellSurface: Color(0xFF15121D),
+    cellPeer: Color(0xFF231C36),
+    cellSameDigit: Color(0xFF3F2A6E),
+    cellSelected: Color(0xFF7C4DFF),
+    cellSelectedFg: Color(0xFFFFFFFF),
+    cellWrong: Color(0xFF5C1F2E),
+    cellWrongFg: Color(0xFFFFB4BF),
+    cellGivenDigit: Color(0xFFF5F2FF),
+    cellUserDigit: Color(0xFFCBB5FF),
+    cellSameDigitFg: Color(0xFFFFFFFF),
+    boardLine: Color(0xFF2A2438),
+    boardLineThick: Color(0xFF6A5A8A),
   );
 
   static const light = AppPalette(
@@ -54,6 +127,18 @@ class AppPalette extends ThemeExtension<AppPalette> {
       Color(0xFFFFFFFF),
       Color(0xFF00BCD4),
     ],
+    cellSurface: Color(0xFFFBFAFF),
+    cellPeer: Color(0xFFEDE6FA),
+    cellSameDigit: Color(0xFFC9B5F2),
+    cellSelected: Color(0xFF6750A4),
+    cellSelectedFg: Color(0xFFFFFFFF),
+    cellWrong: Color(0xFFFFD8E0),
+    cellWrongFg: Color(0xFF8B0028),
+    cellGivenDigit: Color(0xFF1A1A2E),
+    cellUserDigit: Color(0xFF6750A4),
+    cellSameDigitFg: Color(0xFF1A1A2E),
+    boardLine: Color(0xFFD8D2E8),
+    boardLineThick: Color(0xFF7B6FA0),
   );
 
   @override
@@ -65,6 +150,18 @@ class AppPalette extends ThemeExtension<AppPalette> {
     Color? lifeRedFaded,
     List<Color>? iqGenius,
     List<Color>? particleTints,
+    Color? cellSurface,
+    Color? cellPeer,
+    Color? cellSameDigit,
+    Color? cellSelected,
+    Color? cellSelectedFg,
+    Color? cellWrong,
+    Color? cellWrongFg,
+    Color? cellGivenDigit,
+    Color? cellUserDigit,
+    Color? cellSameDigitFg,
+    Color? boardLine,
+    Color? boardLineThick,
   }) {
     return AppPalette(
       goldFrame: goldFrame ?? this.goldFrame,
@@ -74,6 +171,18 @@ class AppPalette extends ThemeExtension<AppPalette> {
       lifeRedFaded: lifeRedFaded ?? this.lifeRedFaded,
       iqGenius: iqGenius ?? this.iqGenius,
       particleTints: particleTints ?? this.particleTints,
+      cellSurface: cellSurface ?? this.cellSurface,
+      cellPeer: cellPeer ?? this.cellPeer,
+      cellSameDigit: cellSameDigit ?? this.cellSameDigit,
+      cellSelected: cellSelected ?? this.cellSelected,
+      cellSelectedFg: cellSelectedFg ?? this.cellSelectedFg,
+      cellWrong: cellWrong ?? this.cellWrong,
+      cellWrongFg: cellWrongFg ?? this.cellWrongFg,
+      cellGivenDigit: cellGivenDigit ?? this.cellGivenDigit,
+      cellUserDigit: cellUserDigit ?? this.cellUserDigit,
+      cellSameDigitFg: cellSameDigitFg ?? this.cellSameDigitFg,
+      boardLine: boardLine ?? this.boardLine,
+      boardLineThick: boardLineThick ?? this.boardLineThick,
     );
   }
 
@@ -88,6 +197,18 @@ class AppPalette extends ThemeExtension<AppPalette> {
       lifeRedFaded: Color.lerp(lifeRedFaded, other.lifeRedFaded, t)!,
       iqGenius: _lerpList(iqGenius, other.iqGenius, t),
       particleTints: _lerpList(particleTints, other.particleTints, t),
+      cellSurface: Color.lerp(cellSurface, other.cellSurface, t)!,
+      cellPeer: Color.lerp(cellPeer, other.cellPeer, t)!,
+      cellSameDigit: Color.lerp(cellSameDigit, other.cellSameDigit, t)!,
+      cellSelected: Color.lerp(cellSelected, other.cellSelected, t)!,
+      cellSelectedFg: Color.lerp(cellSelectedFg, other.cellSelectedFg, t)!,
+      cellWrong: Color.lerp(cellWrong, other.cellWrong, t)!,
+      cellWrongFg: Color.lerp(cellWrongFg, other.cellWrongFg, t)!,
+      cellGivenDigit: Color.lerp(cellGivenDigit, other.cellGivenDigit, t)!,
+      cellUserDigit: Color.lerp(cellUserDigit, other.cellUserDigit, t)!,
+      cellSameDigitFg: Color.lerp(cellSameDigitFg, other.cellSameDigitFg, t)!,
+      boardLine: Color.lerp(boardLine, other.boardLine, t)!,
+      boardLineThick: Color.lerp(boardLineThick, other.boardLineThick, t)!,
     );
   }
 
