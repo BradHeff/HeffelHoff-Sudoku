@@ -212,19 +212,49 @@ class GameController extends StateNotifier<GameState> {
 
   /// Reveal the correct digit at the selected cell. Counts as a hint
   /// and incurs the hint IQ penalty.
+  ///
+  /// If no cell is currently selected, OR the selected cell is already
+  /// filled correctly / is a given clue, the hint walks the board left-
+  /// to-right, top-to-bottom and uses the first empty (or wrong-flagged)
+  /// cell. This matches mainstream Sudoku UX — Hint always *does
+  /// something*.
   void useHint() {
     final s = state;
     if (s is! GameOngoing) return;
-    final sel = s.selected;
-    if (sel == null) return;
+
+    var sel = s.selected;
+
+    bool needsRetarget(({int row, int col}) target) {
+      final c = s.board.at(target.row, target.col);
+      // Need a new target if the current one is given OR already
+      // filled with the correct value (no work to do).
+      return c.isGiven ||
+          (c.value != 0 && !c.isWrong && c.value == s.puzzle.digitAt(target.row, target.col));
+    }
+
+    if (sel == null || needsRetarget(sel)) {
+      sel = null;
+      for (var i = 0; i < 81; i++) {
+        final r = i ~/ 9;
+        final c = i % 9;
+        final cell = s.board.at(r, c);
+        if (cell.isGiven) continue;
+        final correct = s.puzzle.digitAt(r, c);
+        if (cell.value != correct || cell.isWrong) {
+          sel = (row: r, col: c);
+          break;
+        }
+      }
+      if (sel == null) return; // Nothing to reveal.
+    }
+
     final cell = s.board.at(sel.row, sel.col);
-    if (cell.isGiven) return;
     final correct = s.puzzle.digitAt(sel.row, sel.col);
     final next = s.board.withCell(
       cell.copyWith(value: correct, pencilMarks: 0, isWrong: false),
     );
     _afterPlacement(
-      s.copyWith(hintsUsed: s.hintsUsed + 1),
+      s.copyWith(hintsUsed: s.hintsUsed + 1, selected: sel, highlightedDigit: correct),
       next,
       placedDigit: correct,
       placedRow: sel.row,
