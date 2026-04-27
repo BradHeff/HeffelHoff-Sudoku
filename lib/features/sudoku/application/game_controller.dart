@@ -138,6 +138,10 @@ class GameController extends StateNotifier<GameState> {
       return true;
     }
 
+    if (cell.value != 0 && !cell.isWrong) {
+      return false;
+    }
+
     final correct = s.puzzle.isCorrect(row: sel.row, col: sel.col, value: digit);
     if (correct) {
       final next = s.board.withCell(cell.copyWith(value: digit, pencilMarks: 0, isWrong: false));
