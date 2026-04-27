@@ -177,13 +177,52 @@ class GameController extends StateNotifier<GameState> {
 
     if (lives <= 0) {
       _stopTicker();
-      state = GameLost(
-        puzzle: s.puzzle,
-        timeSeconds: s.elapsed.inSeconds,
+      final ongoingSnap = s.copyWith(
+        board: boardWithWrong,
+        lives: 0,
         mistakes: mistakes,
       );
+      if (ongoingSnap.extraLifeUsed) {
+        state = GameLost(
+          puzzle: s.puzzle,
+          timeSeconds: s.elapsed.inSeconds,
+          mistakes: mistakes,
+        );
+      } else {
+        state = GameOutOfLives(ongoing: ongoingSnap);
+      }
     }
     return false;
+  }
+
+  /// Refunds 1 life after the player accepted the out-of-lives offer
+  /// (rewarded ad watched or extra-life IAP purchased). Resumes play.
+  void restoreLife() {
+    final s = state;
+    if (s is! GameOutOfLives) return;
+    final cur = s.ongoing;
+    state = cur.copyWith(lives: 1, extraLifeUsed: true);
+    _startTicker();
+  }
+
+  /// Player declined the offer. Finalise as GameLost.
+  void confirmGameLost() {
+    final s = state;
+    if (s is! GameOutOfLives) return;
+    final cur = s.ongoing;
+    state = GameLost(
+      puzzle: cur.puzzle,
+      timeSeconds: cur.elapsed.inSeconds,
+      mistakes: cur.mistakes,
+    );
+  }
+
+  /// Grants 1 extra hint slot for this puzzle (consumable IAP).
+  void purchaseExtraHint() {
+    final s = state;
+    if (s is! GameOngoing) return;
+    if (s.extraHintPurchased) return;
+    state = s.copyWith(extraHintPurchased: true);
   }
 
   void erase() {

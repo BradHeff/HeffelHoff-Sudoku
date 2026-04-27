@@ -6,6 +6,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../auth/data/auth_repository.dart';
 import '../../leaderboard/presentation/leaderboard_screen.dart';
+import '../../monetization/data/monetization_service.dart';
+import '../../monetization/domain/products.dart';
+import '../../monetization/presentation/out_of_lives_dialog.dart';
+import '../../monetization/presentation/purchase_hint_dialog.dart';
 import '../application/game_controller.dart';
 import '../domain/difficulty.dart';
 import '../domain/game_state.dart';
@@ -18,7 +22,8 @@ import 'widgets/peer_solve_banner.dart';
 import 'widgets/structure_complete_toast.dart';
 import 'widgets/timer_chip.dart';
 
-const int kHintCapFree = 3;
+const int kHintCapFree = 1;
+const int kHintCapWithPurchase = 2;
 
 class GameScreen extends ConsumerWidget {
   const GameScreen({super.key, required this.difficulty});
@@ -41,6 +46,7 @@ class GameScreen extends ConsumerWidget {
           GameLoading() => const _LoadingView(),
           GameError(:final message) => _ErrorView(message: message),
           final GameOngoing s => _OngoingView(state: s, controller: controller),
+          final GameOutOfLives g => _OutOfLivesView(state: g, controller: controller),
           final GameWon w => PostGameIqScreen(
               puzzle: w.puzzle,
               timeSeconds: w.timeSeconds,
@@ -113,6 +119,65 @@ class _LoadingView extends StatelessWidget {
   }
 }
 
+/// Shown when lives hit 0 the first time. Pops up the offer dialog;
+/// the user can earn / buy a life or accept the loss.
+class _OutOfLivesView extends ConsumerStatefulWidget {
+  const _OutOfLivesView({required this.state, required this.controller});
+
+  final GameOutOfLives state;
+  final GameController controller;
+
+  @override
+  ConsumerState<_OutOfLivesView> createState() => _OutOfLivesViewState();
+}
+
+class _OutOfLivesViewState extends ConsumerState<_OutOfLivesView> {
+  bool _opened = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _open());
+  }
+
+  Future<void> _open() async {
+    if (_opened || !mounted) return;
+    _opened = true;
+    final choice = await showOutOfLivesDialog(context);
+    if (!mounted) return;
+    switch (choice) {
+      case OutOfLivesChoice.watchAd:
+        final ok = await ref.read(monetizationServiceProvider).showRewardedAd();
+        if (!mounted) return;
+        if (ok) {
+          widget.controller.restoreLife();
+        } else {
+          widget.controller.confirmGameLost();
+        }
+      case OutOfLivesChoice.purchase:
+        final ok = await ref
+            .read(monetizationServiceProvider)
+            .purchase(MonetizationProduct.extraLife);
+        if (!mounted) return;
+        if (ok) {
+          widget.controller.restoreLife();
+        } else {
+          widget.controller.confirmGameLost();
+        }
+      case OutOfLivesChoice.giveUp:
+        widget.controller.confirmGameLost();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: Colors.transparent,
+      child: Center(child: CircularProgressIndicator()),
+    );
+  }
+}
+
 class _ErrorView extends StatelessWidget {
   const _ErrorView({required this.message});
   final String message;
@@ -140,17 +205,17 @@ class _ErrorView extends StatelessWidget {
   }
 }
 
-class _OngoingView extends StatefulWidget {
+class _OngoingView extends ConsumerStatefulWidget {
   const _OngoingView({required this.state, required this.controller});
 
   final GameOngoing state;
   final GameController controller;
 
   @override
-  State<_OngoingView> createState() => _OngoingViewState();
+  ConsumerState<_OngoingView> createState() => _OngoingViewState();
 }
 
-class _OngoingViewState extends State<_OngoingView> {
+class _OngoingViewState extends ConsumerState<_OngoingView> {
   DateTime? _lastFiredCelebration;
 
   @override
@@ -164,11 +229,27 @@ class _OngoingViewState extends State<_OngoingView> {
     }
   }
 
+  Future<void> _purchaseExtraHint() async {
+    final confirmed = await showPurchaseHintDialog(context);
+    if (!confirmed || !mounted) return;
+    final ok = await ref.read(monetizationServiceProvider).purchase(MonetizationProduct.extraHint);
+    if (!mounted) return;
+    if (ok) {
+      widget.controller.purchaseExtraHint();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Purchase failed. Please try again.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = widget.state;
     final controller = widget.controller;
-    final hintsRemaining = (kHintCapFree - state.hintsUsed).clamp(0, kHintCapFree);
+    final hintCap = state.extraHintPurchased ? kHintCapWithPurchase : kHintCapFree;
+    final hintsRemaining = (hintCap - state.hintsUsed).clamp(0, hintCap);
+    final canBuyExtraHint = !state.extraHintPurchased && state.hintsUsed >= kHintCapFree;
     final celebrateDigit = state.lastCompletedDigit;
     final celebrateRow = state.lastCompletedRow;
     final celebrateCol = state.lastCompletedCol;
@@ -239,6 +320,7 @@ class _OngoingViewState extends State<_OngoingView> {
               _ToolsRow(
                 pencilOn: state.pencilMode,
                 hintsRemaining: hintsRemaining,
+                canBuyExtraHint: canBuyExtraHint,
                 onErase: () {
                   HapticFeedback.lightImpact();
                   controller.erase();
@@ -253,6 +335,7 @@ class _OngoingViewState extends State<_OngoingView> {
                         controller.useHint();
                       }
                     : null,
+                onBuyExtraHint: canBuyExtraHint ? _purchaseExtraHint : null,
               ),
               const SizedBox(height: 12),
               NumberPad(
@@ -371,19 +454,24 @@ class _ToolsRow extends StatelessWidget {
   const _ToolsRow({
     required this.pencilOn,
     required this.hintsRemaining,
+    required this.canBuyExtraHint,
     required this.onErase,
     required this.onPencil,
     required this.onHint,
+    required this.onBuyExtraHint,
   });
 
   final bool pencilOn;
   final int hintsRemaining;
+  final bool canBuyExtraHint;
   final VoidCallback onErase;
   final VoidCallback onPencil;
   final VoidCallback? onHint;
+  final VoidCallback? onBuyExtraHint;
 
   @override
   Widget build(BuildContext context) {
+    final showBuyAffordance = hintsRemaining == 0 && canBuyExtraHint;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
@@ -400,11 +488,11 @@ class _ToolsRow extends StatelessWidget {
           onTap: onPencil,
         ),
         _ToolButton(
-          icon: Icons.lightbulb_outline,
-          label: 'Hint',
-          badge: '$hintsRemaining',
-          badgeOn: hintsRemaining > 0,
-          onTap: onHint,
+          icon: showBuyAffordance ? Icons.add_circle_outline : Icons.lightbulb_outline,
+          label: showBuyAffordance ? 'Buy hint' : 'Hint',
+          badge: showBuyAffordance ? '+1' : '$hintsRemaining',
+          badgeOn: showBuyAffordance || hintsRemaining > 0,
+          onTap: showBuyAffordance ? onBuyExtraHint : onHint,
         ),
       ],
     );
