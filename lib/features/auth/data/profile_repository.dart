@@ -4,10 +4,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth_repository.dart';
 
-/// Snapshot of a row from `public.profiles`. The leaderboard reads
-/// `display_name` (the *public* username) from here. Email is
-/// deliberately not stored on this domain object — it lives only in
-/// `auth.users` and is never exposed to other players.
 @immutable
 class Profile {
   const Profile({
@@ -34,8 +30,7 @@ class Profile {
         ),
       );
 
-  /// True when the user is still on the auto-generated placeholder name.
-  /// Used by the AccountSheet to prompt them to pick a username.
+  /// True when display_name is still the auto-generated Player####.
   bool get isPlaceholderName => RegExp(r'^Player[0-9a-fA-F]{4}$').hasMatch(displayName);
 }
 
@@ -53,10 +48,6 @@ class ProfileRepository {
     return Profile.fromRow(row);
   }
 
-  /// Update the public username. Server-side check constraint enforces
-  /// 2-24 chars; client-side validation in [validateUsername] catches
-  /// other risks (e.g. an `@` symbol that would re-leak email-shaped
-  /// strings).
   Future<void> updateDisplayName({
     required String userId,
     required String name,
@@ -67,8 +58,7 @@ class ProfileRepository {
         .eq('id', userId);
   }
 
-  /// Returns null if [name] is acceptable, else a short error message
-  /// suitable for showing under the input field.
+  /// Returns null if the username is acceptable, else a short error.
   static String? validateUsername(String raw) {
     final name = raw.trim();
     if (name.length < 2) return 'Username must be at least 2 characters.';
@@ -85,10 +75,6 @@ final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
   return ProfileRepository(Supabase.instance.client);
 });
 
-/// Profile of the currently signed-in user. Null when no auth session.
-/// Re-fetches whenever the auth user changes; callers can also call
-/// `ref.invalidate(currentProfileProvider)` after a successful update
-/// to refresh.
 final currentProfileProvider = FutureProvider.autoDispose<Profile?>((ref) async {
   final user = ref.watch(authStateProvider).asData?.value;
   if (user == null) return null;

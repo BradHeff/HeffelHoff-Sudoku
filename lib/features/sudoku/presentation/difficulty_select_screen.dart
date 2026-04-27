@@ -26,7 +26,6 @@ class DifficultySelectScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Brand logo + wordmark hero block.
               Row(
                 children: [
                   Container(
@@ -63,8 +62,6 @@ class DifficultySelectScreen extends ConsumerWidget {
                             color: scheme.onSurfaceVariant,
                           ).copyWith(letterSpacing: 3, fontWeight: FontWeight.w400),
                         ),
-                        // FittedBox ensures the wordmark scales down to
-                        // fit the available width and never wraps.
                         FittedBox(
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
@@ -114,9 +111,6 @@ class DifficultySelectScreen extends ConsumerWidget {
                         totalSeparators;
                     final available = constraints.maxHeight;
 
-                    // If the screen can't fit even the minimum heights,
-                    // fall back to a scrollable list at the per-tier
-                    // minimums.
                     if (available <= totalMinHeight) {
                       return ListView.separated(
                         padding: EdgeInsets.zero,
@@ -137,9 +131,6 @@ class DifficultySelectScreen extends ConsumerWidget {
                       );
                     }
 
-                    // Otherwise scale every card proportionally so the
-                    // five cards (plus fixed separators) exactly fill
-                    // the available height.
                     final scale =
                         (available - totalSeparators) / (totalMinHeight - totalSeparators);
                     return Column(
@@ -170,9 +161,6 @@ class DifficultySelectScreen extends ConsumerWidget {
 }
 
 
-/// Avatar button on the home screen header. Shows the first letter of
-/// the signed-in user's *username* (never the email) — keeps the email
-/// private. Falls back to a person icon for guest / signed-out.
 class _AccountAvatarButton extends ConsumerWidget {
   const _AccountAvatarButton();
 

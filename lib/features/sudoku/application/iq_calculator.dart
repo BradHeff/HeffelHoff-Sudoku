@@ -1,19 +1,8 @@
 import '../domain/difficulty.dart';
 import '../domain/game_state.dart';
 
-/// Computes a per-puzzle IQ score from time, mistakes, hints, and tier.
-///
-/// Formula (matches `docs/PLAN.md` and the Postgres `compute_iq`
-/// function — keep all three implementations in sync):
-///
-///   ratio = time_seconds / target_time_for_tier
-///   if ratio <= 1.0:
-///     time_component = lerp(time_bonus_cap, 0, ratio)
-///   else:
-///     over = min(ratio - 1.0, 2.0)
-///     time_component = -lerp(0, time_penalty_cap, over / 2.0)
-///   iq = clamp(round(base + time_component
-///                    - 4*mistakes - 6*hints_used), 70, 200)
+/// Per-puzzle IQ from time, mistakes, hints, and tier. Mirrors the
+/// Postgres compute_iq() function and docs/PLAN.md — keep in sync.
 class IqCalculator {
   static const int einsteinIq = 160;
   static const int floorIq = 70;
@@ -32,12 +21,8 @@ class IqCalculator {
 
     double timeComponent;
     if (ratio <= 1.0) {
-      // Faster than target → bonus, scaling linearly from +cap (ratio 0)
-      // to 0 (ratio 1.0).
       timeComponent = _lerp(difficulty.timeBonusCap.toDouble(), 0, ratio);
     } else {
-      // Slower than target → penalty, capped at -timePenaltyCap when
-      // the user takes 3× the target time.
       final over = (ratio - 1.0).clamp(0.0, 2.0);
       timeComponent = -_lerp(0, difficulty.timePenaltyCap.toDouble(), over / 2.0);
     }
@@ -57,7 +42,7 @@ class IqCalculator {
     );
   }
 
-  /// UI headline for the post-game Einstein-comparison bar.
+  /// Headline copy for the post-game Einstein-comparison bar.
   static String einsteinHeadline(int iqScore) {
     final delta = iqScore - einsteinIq;
     if (delta >= 0) {

@@ -3,18 +3,9 @@ import 'package:flutter/material.dart';
 import 'app_colors.dart';
 import 'app_text_styles.dart';
 
-/// Material 3 themes. The default seed is HeffelHoff brand cyan
-/// (#36A8FA) — extracted from assets/branding/playstore_icon.png and
-/// documented in docs/BRANDING.md. A retro-violet alternate
-/// (#7C4DFF) ships in Phase 4 via settings.
 class AppTheme {
-  /// HeffelHoff brand cyan. Use for primary actions, headlines, focus.
   static const Color seedDefault = Color(0xFF36A8FA);
-
-  /// Alternate retro-violet seed (Phase 4 settings toggle).
   static const Color seedNeon = Color(0xFF7C4DFF);
-
-  /// Brand background — deep navy that matches the icon's grid backdrop.
   static const Color brandBackground = Color(0xFF01072D);
 
   static ThemeData light({Color seed = seedDefault}) {

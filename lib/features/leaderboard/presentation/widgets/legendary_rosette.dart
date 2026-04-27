@@ -3,17 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-/// Top-3 rank decoration. Three intensities matching the tier-card
-/// system on the home screen:
-///
-///   rank 3 — Master    (bronze)  — sweep border + particle aura
-///   rank 2 — Epic      (silver)  — sweep border + denser aura + halo
-///   rank 1 — Legendary (gold)    — sweep border + densest aura +
-///                                   shimmer sweep + crown
-///
-/// All three render the rosette base (12-petal scalloped circle with
-/// the rank numeral centred) underneath the decorations so the badge
-/// still reads as a rank at a glance.
+/// Top-3 rank badge. Decoration intensity climbs rank 3 → 1.
 class LegendaryRosette extends StatefulWidget {
   const LegendaryRosette({
     super.key,
@@ -23,18 +13,11 @@ class LegendaryRosette extends StatefulWidget {
     this.isCurrentUser = false,
   });
 
-  /// 1, 2 or 3 — chooses the decoration intensity.
   final int rank;
-
-  /// Frame gradient: gold/silver/bronze.
   final List<Color> gradient;
-
-  /// Side length in dp.
   final double size;
-
   final bool isCurrentUser;
 
-  /// "LEGENDARY" / "EPIC" / "MASTER" label paired with this rank.
   static String tierLabel(int rank) => switch (rank) {
         1 => 'LEGENDARY',
         2 => 'EPIC',
@@ -65,7 +48,6 @@ class _LegendaryRosetteState extends State<LegendaryRosette>
     super.dispose();
   }
 
-  // Higher rank = higher decoration intensity (1 = max).
   int get _intensity => switch (widget.rank) {
         1 => 4,
         2 => 3,
@@ -85,7 +67,6 @@ class _LegendaryRosetteState extends State<LegendaryRosette>
         clipBehavior: Clip.none,
         alignment: Alignment.center,
         children: [
-          // Outer halo (intensity ≥ 3)
           if (_intensity >= 3)
             Container(
               width: auraSize,
@@ -101,7 +82,6 @@ class _LegendaryRosetteState extends State<LegendaryRosette>
               ),
             ),
 
-          // Particle aura
           AnimatedBuilder(
             animation: _spin,
             builder: (context, _) => CustomPaint(
@@ -114,7 +94,6 @@ class _LegendaryRosetteState extends State<LegendaryRosette>
             ),
           ),
 
-          // Animated SweepGradient border
           AnimatedBuilder(
             animation: _spin,
             builder: (context, _) => CustomPaint(
@@ -127,7 +106,6 @@ class _LegendaryRosetteState extends State<LegendaryRosette>
             ),
           ),
 
-          // Rosette body + rank numeral
           SizedBox(
             width: s,
             height: s,
@@ -154,7 +132,6 @@ class _LegendaryRosetteState extends State<LegendaryRosette>
             ),
           ),
 
-          // Crown for Legendary (rank 1) only
           if (widget.rank == 1)
             Positioned(
               top: -6,
@@ -176,7 +153,6 @@ class _LegendaryRosetteState extends State<LegendaryRosette>
       ),
     );
 
-    // Shimmer sweep on Legendary
     if (widget.rank == 1) {
       badge = Stack(
         clipBehavior: Clip.none,
@@ -204,7 +180,6 @@ class _LegendaryRosetteState extends State<LegendaryRosette>
   }
 }
 
-/// Scalloped 12-petal rosette body (alternating outer + inner radii).
 class _RosettePainter extends CustomPainter {
   _RosettePainter({required this.colors});
   final List<Color> colors;
@@ -242,7 +217,6 @@ class _RosettePainter extends CustomPainter {
         ).createShader(Rect.fromCircle(center: centre, radius: r)),
     );
 
-    // Inner highlight arc (top-left shine)
     canvas.drawArc(
       Rect.fromCircle(center: centre, radius: r * 0.7),
       -math.pi * 0.85,
@@ -260,7 +234,6 @@ class _RosettePainter extends CustomPainter {
   bool shouldRepaint(covariant _RosettePainter old) => old.colors != colors;
 }
 
-/// Rotating SweepGradient ring around the rosette body.
 class _SweepRingPainter extends CustomPainter {
   _SweepRingPainter({
     required this.t,
@@ -306,7 +279,6 @@ class _SweepRingPainter extends CustomPainter {
       old.t != t || old.colors != colors || old.strokeWidth != strokeWidth;
 }
 
-/// Particle dots orbiting outside the rosette.
 class _AuraPainter extends CustomPainter {
   _AuraPainter({required this.t, required this.count, required this.colors});
   final double t;

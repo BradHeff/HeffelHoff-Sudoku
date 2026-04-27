@@ -6,9 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../data/auth_repository.dart';
 import '../data/profile_repository.dart';
 
-/// Modal bottom sheet that handles sign-in / sign-up / guest / sign-out.
-/// Renders different content based on whether the user is currently
-/// signed in.
+/// Modal bottom sheet for sign-in / sign-up / guest / sign-out.
 Future<void> showAccountSheet(BuildContext context) {
   return showModalBottomSheet(
     context: context,
@@ -100,8 +98,6 @@ class _SignInFormState extends ConsumerState<_SignInForm> {
     }
   }
 
-  /// Adds a hint when the error is one we know has a one-flag fix in
-  /// the Supabase dashboard.
   static String _humaniseAuthError(String raw) {
     final lower = raw.toLowerCase();
     if (lower.contains('email not confirmed')) {
@@ -247,8 +243,6 @@ class _SignedInView extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Avatar uses the username's first letter (or person icon for guest).
-        // Email is intentionally never rendered.
         profileAsync.when(
           loading: () => const SizedBox(
             height: 72,
@@ -283,7 +277,6 @@ class _SignedInView extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 12),
-        // Username editor.
         profileAsync.when(
           loading: () => const SizedBox.shrink(),
           error: (e, _) => Text(
@@ -340,11 +333,7 @@ class _SignedInView extends ConsumerWidget {
   }
 }
 
-/// Username display + inline editor. Two states:
-///   collapsed → tap "Edit" to expand
-///   editing   → TextField + Save / Cancel
-/// When the profile is still on the auto-generated Player#### name,
-/// the row shows a "Set a username" affordance and starts in edit mode.
+/// Inline username editor. Auto-opens in edit mode on placeholder names.
 class _UsernameEditor extends ConsumerStatefulWidget {
   const _UsernameEditor({required this.user, required this.profile});
 
@@ -366,8 +355,6 @@ class _UsernameEditorState extends ConsumerState<_UsernameEditor> {
     super.initState();
     final name = widget.profile?.displayName ?? '';
     _controller = TextEditingController(text: name);
-    // Auto-edit if still on placeholder so it's obvious the user
-    // should pick a real username.
     if (widget.profile?.isPlaceholderName ?? false) {
       _editing = true;
     }
@@ -454,7 +441,7 @@ class _UsernameEditorState extends ConsumerState<_UsernameEditor> {
             labelText: 'Username',
             hintText: 'How others will know you',
             border: const OutlineInputBorder(),
-            counterText: '', // hide the 0/24
+            counterText: '',
             errorText: _error,
             prefixIcon: const Icon(Icons.badge_outlined),
           ),

@@ -18,8 +18,6 @@ import 'widgets/peer_solve_banner.dart';
 import 'widgets/structure_complete_toast.dart';
 import 'widgets/timer_chip.dart';
 
-/// Phase 1 hint cap (shared with the controller-level hint method).
-/// Phase 6 bumps this to 5 for Pro users.
 const int kHintCapFree = 3;
 
 class GameScreen extends ConsumerWidget {
@@ -33,9 +31,6 @@ class GameScreen extends ConsumerWidget {
     final state = ref.watch(gameControllerProvider(providerArgs));
     final controller = ref.read(gameControllerProvider(providerArgs).notifier);
 
-    // Force a fresh GameController instance on Play Again. Same route +
-    // same family key (difficulty, seed:null) returns the cached
-    // notifier still in GameWon/Lost — so we explicitly invalidate.
     void replay() {
       ref.invalidate(gameControllerProvider(providerArgs));
     }
@@ -59,7 +54,6 @@ class GameScreen extends ConsumerWidget {
               onNext: () {
                 final user = ref.read(authStateProvider).asData?.value;
                 if (user == null) {
-                  // Not signed in → leaderboard with no climb anim.
                   context.go('/leaderboard');
                   return;
                 }
@@ -68,8 +62,6 @@ class GameScreen extends ConsumerWidget {
                   extra: LeaderboardArrival(
                     tier: w.puzzle.difficulty,
                     userId: user.id,
-                    // Previous IQ unknown without a pre-fetch; use a
-                    // 0 baseline so the count-up always plays.
                     previousIq: 0,
                     newIq: w.iqScore,
                   ),
@@ -167,7 +159,6 @@ class _OngoingViewState extends State<_OngoingView> {
     final at = widget.state.lastCompletedAt;
     if (at != null && at != _lastFiredCelebration) {
       _lastFiredCelebration = at;
-      // Success haptic pattern for the wow moment.
       HapticFeedback.heavyImpact();
       Future<void>.delayed(const Duration(milliseconds: 120), HapticFeedback.mediumImpact);
     }
@@ -227,7 +218,6 @@ class _OngoingViewState extends State<_OngoingView> {
                       controller.selectCell(r, c);
                     },
                   ),
-                  // Stacked structure-complete toasts above the board.
                   if (hasStructureToast && celebrateKey != null)
                     Positioned(
                       top: -56,
@@ -282,7 +272,6 @@ class _OngoingViewState extends State<_OngoingView> {
             ],
           ),
         ),
-        // Centered overlay only for digit-complete (rarest, biggest moment).
         if (celebrateDigit != null && celebrateKey != null)
           Positioned.fill(
             child: DigitCompleteOverlay(
@@ -315,7 +304,6 @@ class _Header extends StatelessWidget {
           onPressed: () => GoRouter.of(context).go('/'),
           icon: const Icon(Icons.arrow_back),
         ),
-        // Streak chip — Phase 1 shows 0; wired to real streak in Phase 4.
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(

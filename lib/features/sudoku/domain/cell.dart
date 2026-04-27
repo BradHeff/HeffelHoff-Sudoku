@@ -1,11 +1,5 @@
 import 'package:flutter/foundation.dart';
 
-/// Immutable snapshot of a single Sudoku cell.
-///
-/// `value == 0` means empty. `isGiven` cells are part of the original
-/// puzzle clue set and cannot be changed by the player. `pencilMarks`
-/// is a 9-bit set (bit i = candidate (i+1) marked) when the player is
-/// in pencil mode.
 @immutable
 class Cell {
   const Cell({
@@ -17,9 +11,9 @@ class Cell {
     this.isWrong = false,
   });
 
-  final int row; // 0..8
-  final int col; // 0..8
-  final int value; // 0 = empty, 1..9 = digit
+  final int row;
+  final int col;
+  final int value;
   final bool isGiven;
   final int pencilMarks;
   final bool isWrong;

@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Outfit for display + numerals (the IQ score), Inter for body. Both via
-/// google_fonts at runtime; no bundled .ttf needed for now.
+/// Outfit for displays/numerals, Inter for body.
 TextTheme buildTextTheme(ColorScheme scheme) {
   final base = ThemeData(brightness: scheme.brightness).textTheme;
-
   final body = GoogleFonts.interTextTheme(base).apply(
     bodyColor: scheme.onSurface,
     displayColor: scheme.onSurface,
   );
-
   final outfit = GoogleFonts.outfitTextTheme(base);
 
   return body.copyWith(
@@ -47,8 +44,7 @@ TextTheme buildTextTheme(ColorScheme scheme) {
   );
 }
 
-/// Big, bold, monospaced-feeling number style for the IQ result and
-/// podium IQ scores. Outfit Bold at 56pt with tight tracking.
+/// Big bold IQ-result number style.
 TextStyle iqDisplayStyle(BuildContext context, {Color? color, double size = 56}) {
   final scheme = Theme.of(context).colorScheme;
   return GoogleFonts.outfit(

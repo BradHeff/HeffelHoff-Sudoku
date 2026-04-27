@@ -4,8 +4,6 @@ import 'board.dart';
 import 'difficulty.dart';
 import 'puzzle.dart';
 
-/// Game state — discriminated union via Dart 3 sealed classes (no
-/// freezed dependency for Phase 1; convert later if needed).
 sealed class GameState {
   const GameState();
 }
@@ -43,10 +41,7 @@ class GameOngoing extends GameState {
 
   final Puzzle puzzle;
   final Board board;
-
-  /// (row, col) of the currently focused cell, or null.
   final ({int row, int col})? selected;
-
   final int lives;
   final int maxLives;
   final int mistakes;
@@ -55,37 +50,11 @@ class GameOngoing extends GameState {
   final DateTime startedAt;
   final bool pencilMode;
   final bool paused;
-
-  /// Set when the player has just placed the 9th correct instance of a
-  /// digit, completing it across the board. Cleared by the controller
-  /// after the celebration animation finishes (~1500ms).
   final int? lastCompletedDigit;
-
-  /// Set (0..8) when a row was just completed by the placement.
   final int? lastCompletedRow;
-
-  /// Set (0..8) when a column was just completed by the placement.
   final int? lastCompletedCol;
-
-  /// Set (0..8) when a 3×3 box was just completed. Box index runs
-  /// left→right, top→bottom: top row of boxes is 0,1,2; middle 3,4,5;
-  /// bottom 6,7,8.
   final int? lastCompletedBox;
-
-  /// Monotonic timestamp the celebration was triggered. Shared across
-  /// all four `lastCompleted*` fields so a single placement that
-  /// completes (e.g.) a digit + a row + a box uses one keying value.
   final DateTime? lastCompletedAt;
-
-  /// The digit currently being highlighted across the board (every cell
-  /// with this value gets the same-digit wash). Decoupled from
-  /// [selected] so the highlight survives a tap on an empty cell —
-  /// users often tap an empty cell *intending* to enter the highlighted
-  /// digit there. Cleared when:
-  ///   - the user taps a second empty cell without entering a digit
-  ///     between the two taps (lost intent), or
-  ///   - the user enters a digit (the just-placed digit becomes the
-  ///     new highlight).
   final int? highlightedDigit;
 
   bool get hasAnyCompletion =>
@@ -160,14 +129,7 @@ class GameWon extends GameState {
   final int mistakes;
   final int hintsUsed;
   final int livesRemaining;
-
-  /// Provisional client-side IQ. Will be overwritten by server on sync.
   final int iqScore;
-
-  /// True when the puzzle was solved in less than the tier's
-  /// `target_time_seconds`. Triggers the "GENIUS" enhanced celebration
-  /// on the post-game screen — bigger confetti, gold IQ glow,
-  /// extended particle storm, longer audio fanfare.
   final bool wasUnderTarget;
 }
 
@@ -197,7 +159,7 @@ class IqResult {
   final int timeComponent;
   final int mistakePenalty;
   final int hintPenalty;
-  final int einsteinDelta; // iqScore - 160
+  final int einsteinDelta;
 
   bool get beatEinstein => einsteinDelta >= 0;
 }

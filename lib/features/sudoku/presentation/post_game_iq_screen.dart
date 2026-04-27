@@ -7,15 +7,8 @@ import '../../../core/theme/app_text_styles.dart';
 import '../application/iq_calculator.dart';
 import '../domain/puzzle.dart';
 
-/// Post-game screen. On a win, shows the IQ count-up + Einstein
-/// comparison bar with a confetti burst. On a loss, shows the failed
-/// state with a "Try Again" CTA.
-///
-/// When [wasUnderTarget] is true (puzzle solved faster than the tier's
-/// target time), the celebration is dialled up: bigger confetti volume,
-/// extra particle storm, gold "GENIUS PERFORMANCE" header, and a
-/// pulsing gold glow ring around the IQ number — the "ultimate
-/// dopamine hit" moment.
+/// Post-game IQ screen with Einstein bar + confetti, plus the
+/// enhanced "GENIUS" celebration when [wasUnderTarget] is true.
 class PostGameIqScreen extends StatefulWidget {
   const PostGameIqScreen({
     super.key,
@@ -41,9 +34,6 @@ class PostGameIqScreen extends StatefulWidget {
   final VoidCallback onPlayAgain;
   final VoidCallback onBackToStart;
 
-  /// Primary CTA on a win: typically navigates to the leaderboard with
-  /// climb-animation context. When null, only the secondary actions
-  /// show.
   final VoidCallback? onNext;
 
   @override
@@ -139,9 +129,6 @@ class _PostGameIqScreenState extends State<PostGameIqScreen> {
 
     return Stack(
       children: [
-        // Body in a Column with the celebration content scrolling if
-        // needed, and the action buttons pinned to the bottom of the
-        // view so they're always tappable.
         Column(
           children: [
             Expanded(
@@ -233,8 +220,6 @@ class _PostGameIqScreenState extends State<PostGameIqScreen> {
                 ),
               ),
             ),
-            // Pinned footer with the action buttons. SafeArea handles
-            // the gesture-bar inset on Android navigation pill.
             SafeArea(
               top: false,
               child: Padding(

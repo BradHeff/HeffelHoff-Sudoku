@@ -5,9 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../domain/cell.dart';
 
-/// A single Sudoku cell. The widget is dumb — all state-machine logic
-/// (selected, peer-highlighted, same-digit) is computed by the parent
-/// and passed in as flags.
+/// A single Sudoku cell.
 class CellWidget extends StatelessWidget {
   const CellWidget({
     super.key,
@@ -26,9 +24,6 @@ class CellWidget extends StatelessWidget {
   final bool isSameDigitHighlighted;
   final VoidCallback onTap;
 
-  /// True when this cell's value matches the digit the player just
-  /// completed across the whole board. Triggers a one-shot golden
-  /// shimmer pulse re-keyed on [celebrateKey].
   final bool celebrate;
   final Object? celebrateKey;
 
@@ -37,9 +32,6 @@ class CellWidget extends StatelessWidget {
     final palette = Theme.of(context).extension<AppPalette>()!;
     final scheme = Theme.of(context).colorScheme;
 
-    // State priority: wrong > selected > same-digit > peer > base.
-    // Givens and empty cells share [cellSurface] — distinguished only by
-    // font weight + color — so the board doesn't look speckled.
     final Color background;
     if (cell.isWrong) {
       background = palette.cellWrong;
@@ -106,7 +98,6 @@ class CellWidget extends StatelessWidget {
           .tint(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.18), duration: 220.ms);
     }
 
-    // Digit-complete celebration: golden tint sweep + scale bounce.
     if (celebrate && !cell.isWrong) {
       cellBox = cellBox
           .animate(key: ValueKey('celebrate-${cell.row}-${cell.col}-$celebrateKey'))

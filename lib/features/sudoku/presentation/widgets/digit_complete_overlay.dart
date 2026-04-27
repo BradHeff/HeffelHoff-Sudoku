@@ -6,14 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../../core/theme/app_colors.dart';
 
-/// Centered "wow moment" overlay shown when the player completes all 9
-/// instances of a digit on the board. Fires a confetti burst from the
-/// center, animates the digit in big gold letters with a sparkle aura,
-/// and fades out after [duration].
-///
-/// Drives off a non-null [digit] + [triggeredAt] pair: when the keying
-/// timestamp changes, the animation re-fires, even if the digit value
-/// is the same as a previous celebration.
+/// Full-screen celebration when the player completes all 9 of a digit.
 class DigitCompleteOverlay extends StatefulWidget {
   const DigitCompleteOverlay({
     super.key,
@@ -59,7 +52,6 @@ class _DigitCompleteOverlayState extends State<DigitCompleteOverlay> {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Backdrop dim — subtle, doesn't block the board.
           Positioned.fill(
             child: Container(color: scheme.scrim.withValues(alpha: 0.18))
                 .animate()
@@ -67,14 +59,12 @@ class _DigitCompleteOverlayState extends State<DigitCompleteOverlay> {
                 .then(delay: widget.duration - const Duration(milliseconds: 350))
                 .fadeOut(duration: 350.ms),
           ),
-          // Soft radial sparkle aura behind the digit.
           _SparkleAura(palette: palette).animate().fadeIn(duration: 200.ms).scale(
                 begin: const Offset(0.6, 0.6),
                 end: const Offset(1, 1),
                 duration: 500.ms,
                 curve: Curves.easeOutBack,
               ),
-          // The big digit.
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -131,7 +121,6 @@ class _DigitCompleteOverlayState extends State<DigitCompleteOverlay> {
                   .fadeOut(duration: 250.ms),
             ],
           ),
-          // Confetti burst from the center, blasting outward in all directions.
           ConfettiWidget(
             confettiController: _confetti,
             blastDirectionality: BlastDirectionality.explosive,
@@ -149,8 +138,6 @@ class _DigitCompleteOverlayState extends State<DigitCompleteOverlay> {
   }
 }
 
-/// A simple radial gradient "sparkle aura" rendered behind the digit.
-/// Cheaper than spawning many CustomPainter particles for a one-shot.
 class _SparkleAura extends StatelessWidget {
   const _SparkleAura({required this.palette});
   final AppPalette palette;
@@ -174,7 +161,6 @@ class _SparkleAuraPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
 
-    // Halo: radial gradient from gold center to transparent edge.
     final haloPaint = Paint()
       ..shader = RadialGradient(
         colors: [
@@ -186,7 +172,6 @@ class _SparkleAuraPainter extends CustomPainter {
       ).createShader(Rect.fromCircle(center: center, radius: radius));
     canvas.drawCircle(center, radius, haloPaint);
 
-    // Light rays (8-spoke star).
     final rayPaint = Paint()
       ..color = palette.goldFrame.first.withValues(alpha: 0.45)
       ..strokeWidth = 3

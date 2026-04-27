@@ -12,9 +12,7 @@ import 'widgets/leaderboard_header.dart';
 import 'widgets/legendary_rosette.dart';
 import 'widgets/rank_rosette.dart';
 
-/// Optional payload passed via `context.go('/leaderboard', extra: ...)`
-/// when the user has just won a puzzle and is being routed here for the
-/// climb animation.
+/// Payload for the leaderboard climb animation after a puzzle win.
 class LeaderboardArrival {
   const LeaderboardArrival({
     required this.tier,
@@ -23,21 +21,12 @@ class LeaderboardArrival {
     required this.newIq,
   });
 
-  /// Tier to land on.
   final Difficulty tier;
   final String userId;
   final int previousIq;
   final int newIq;
 }
 
-/// Top-100 leaderboard with tier-chip filter, horizontal medallion
-/// podium for ranks 1-3, and a list of rosette-rank rows for 4+.
-/// Subscribes to Realtime so rankings reorder live.
-///
-/// When opened with [LeaderboardArrival] in route extras, plays a
-/// climb animation: the user's row pulses + their IQ counts up from
-/// the previous score to the new one. If the new IQ overtakes the
-/// row currently above, list reordering animates the swap.
 class LeaderboardScreen extends ConsumerStatefulWidget {
   const LeaderboardScreen({super.key, this.arrival});
 
@@ -165,7 +154,6 @@ class _LeaderboardBody extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
-        // Header banner (decorative — no entry data bound to it).
         const Padding(
           padding: EdgeInsets.only(bottom: 16),
           child: LeaderboardHeader(),
@@ -253,10 +241,6 @@ class _RankRow extends StatelessWidget {
     final mins = (entry.bestTimeSeconds ~/ 60).toString().padLeft(2, '0');
     final secs = (entry.bestTimeSeconds % 60).toString().padLeft(2, '0');
 
-    // Top-3 use the LegendaryRosette (gold/silver/bronze with animated
-    // gradient ring + particle aura + crown for rank 1). Ranks 4+ use
-    // the plain RankRosette in either primary cyan (current user) or
-    // a neutral surface.
     final isTopThree = rank <= 3;
     final List<Color> topGradient = switch (rank) {
       1 => palette.goldFrame,
@@ -269,7 +253,6 @@ class _RankRow extends StatelessWidget {
 
     Widget iqText;
     if (arrival != null) {
-      // Fresh-win arrival: count IQ up from previous to new.
       iqText = TweenAnimationBuilder<double>(
         tween: Tween(
           begin: arrival!.previousIq.toDouble(),
@@ -369,7 +352,6 @@ class _RankRow extends StatelessWidget {
       ),
     );
 
-    // Climb arrival: pulse the row briefly so the user's eye catches it.
     if (arrival != null) {
       row = row
           .animate()

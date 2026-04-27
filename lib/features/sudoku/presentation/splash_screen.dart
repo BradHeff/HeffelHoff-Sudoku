@@ -6,11 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_text_styles.dart';
 
-/// Animated in-app splash. Shown on first launch after the OS-level
-/// native splash hands off. Deep-navy backdrop with the brain Logo
-/// scaling in + neon pulsing, framed by a slow-rotating ring of
-/// cyan/violet/magenta sparks. Auto-navigates to the home route
-/// after [duration].
+/// In-app splash with animated brain logo + spark ring.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({
     super.key,
@@ -52,10 +48,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       body: Stack(
         alignment: Alignment.center,
         children: [
-          // Faint grid backdrop hint — same vibe as the playstore icon.
           const Positioned.fill(child: _GridBackdrop()),
 
-          // Slow-rotating spark ring around the logo.
           AnimatedBuilder(
             animation: _ringController,
             builder: (context, _) => CustomPaint(
@@ -64,7 +58,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             ),
           ),
 
-          // The brain Logo with a soft neon halo behind it.
           Container(
             width: 240,
             height: 240,
@@ -97,7 +90,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 size: 0.7,
               ),
 
-          // Wordmark under the logo.
           Positioned(
             bottom: 120,
             left: 0,
@@ -134,8 +126,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 }
 
-/// Subtle dotted-grid backdrop, hinting at the Sudoku grid behind the
-/// circuit brain in the playstore icon.
 class _GridBackdrop extends StatelessWidget {
   const _GridBackdrop();
   @override
@@ -161,8 +151,6 @@ class _GridPainter extends CustomPainter {
   bool shouldRepaint(covariant _GridPainter old) => false;
 }
 
-/// 12 cyan/violet/magenta sparks orbiting the logo. Each spark is a
-/// small radial dot with a glow.
 class _SparkRingPainter extends CustomPainter {
   _SparkRingPainter({required this.t});
   final double t;
@@ -182,7 +170,6 @@ class _SparkRingPainter extends CustomPainter {
       final theta = (math.pi * 2) * (i / count) + t * math.pi * 2;
       final pos = center + Offset(math.cos(theta), math.sin(theta)) * radius;
       final color = _palette[i % _palette.length];
-      // Glow halo
       canvas.drawCircle(
         pos,
         6,
@@ -190,7 +177,6 @@ class _SparkRingPainter extends CustomPainter {
           ..color = color.withValues(alpha: 0.25)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
       );
-      // Bright core
       canvas.drawCircle(pos, 2.5, Paint()..color = color);
     }
   }

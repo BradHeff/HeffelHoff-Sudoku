@@ -3,13 +3,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../../core/theme/app_colors.dart';
 
-/// Stacked toast labels shown when one or more structures (row, column,
-/// 3×3 box) complete. Multiple completions on the same placement render
-/// stacked pills — a "TRIPLE" or even "QUAD" combo if the digit
-/// completed too.
-///
-/// Positioned by the caller; this widget is just the floating label
-/// stack with auto fade-in/fade-out keyed on [triggeredAt].
+/// Stacked "ROW/COL/BOX COMPLETE" pills shown above the board on a
+/// structure-completion event, with a combo badge for 2+ structures.
 class StructureCompleteToast extends StatelessWidget {
   const StructureCompleteToast({
     super.key,
@@ -47,8 +42,6 @@ class StructureCompleteToast extends StatelessWidget {
     if (_comboLabel != null) {
       pills.add(_ComboBadge(label: _comboLabel!, palette: palette));
     }
-    // Skip a "DIGIT N" pill for digit-complete since the centered overlay
-    // already announces it loud and clear.
     if (completedRow != null) {
       pills.add(_StructurePill(
         label: 'ROW ${completedRow! + 1} COMPLETE',

@@ -2,9 +2,6 @@ import 'package:flutter/foundation.dart';
 
 import '../../sudoku/domain/difficulty.dart';
 
-/// One row of `public.leaderboard_entries` joined with the user's profile
-/// (display_name, avatar_url, is_pro). Position-in-list is computed
-/// client-side from the ordered query result.
 @immutable
 class LeaderboardEntry {
   const LeaderboardEntry({

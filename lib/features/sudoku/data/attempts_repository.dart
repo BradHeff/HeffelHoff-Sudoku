@@ -3,21 +3,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../domain/puzzle.dart';
 
-/// Writes the player's completed-puzzle attempt to
-/// `public.puzzle_attempts`. The trigger `update_leaderboard_on_attempt`
-/// then upserts `leaderboard_entries`.
-///
-/// Phase 2/3 path: client computes IQ and writes it directly. Phase 5
-/// switches this to a server-side recompute via the `submit-attempt`
-/// Edge Function so the leaderboard can't be tampered with.
 class AttemptsRepository {
   AttemptsRepository(this._client);
 
   final SupabaseClient _client;
 
-  /// Returns true if the attempt was persisted. Returns false (without
-  /// throwing) if no user is signed in — the game stays playable
-  /// offline / pre-auth.
+  /// Persist a winning attempt. Returns false (no throw) if no auth session.
   Future<bool> submitWin({
     required Puzzle puzzle,
     required DateTime startedAt,
@@ -43,9 +34,6 @@ class AttemptsRepository {
       'completed': true,
       'failed': false,
       'iq_score_client': iqScore,
-      // Phase 2/3 sets iq_score directly so the leaderboard trigger can
-      // pick it up. Phase 5 will null this out and let the Edge Function
-      // recompute server-side.
       'iq_score': iqScore,
       'client_version': 'phase3-direct-insert',
     });

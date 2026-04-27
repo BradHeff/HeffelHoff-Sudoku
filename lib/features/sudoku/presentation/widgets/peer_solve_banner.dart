@@ -1,15 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-/// Slide-in banner shown briefly at puzzle start: "X.XX% of players have
-/// solved this puzzle". Inspired by Sudoku Master. Phase 5 wires the
-/// real win-rate from `puzzle_stats`; until then we synthesise a
-/// **deterministic** value in [20.00, 40.00] from the puzzle seed so
-/// the number stays believable AND stable across rebuilds for the
-/// same puzzle.
-///
-/// Pass `solveRatePercent` for real data; pass `puzzleSeed` to fall
-/// back to the deterministic synthetic value.
+/// "X.XX% of players have solved this puzzle" banner shown at start.
 class PeerSolveBanner extends StatelessWidget {
   const PeerSolveBanner({
     super.key,
@@ -20,12 +12,8 @@ class PeerSolveBanner extends StatelessWidget {
   final double? solveRatePercent;
   final int? puzzleSeed;
 
-  /// Synthetic peer-solve % derived from a puzzle seed. Range
-  /// [20.00, 40.00], two decimal places. Same seed → same value, so
-  /// the banner doesn't flicker on rebuild.
+  /// Synthetic peer-solve % from a puzzle seed (range [20.00, 40.00]).
   static double syntheticPercent(int seed) {
-    // Mix the seed into a 32-bit hash, take the low 14 bits, scale to
-    // [0, 1), then map to [20.00, 40.00].
     final mixed = (seed.abs() ^ 0x9E3779B9) * 2654435761;
     final fraction = (mixed.abs() & 0x3FFF) / 0x4000;
     final pct = 20.0 + fraction * 20.0;
@@ -75,7 +63,6 @@ class PeerSolveBanner extends StatelessWidget {
         .animate()
         .slideY(begin: -0.4, end: 0, duration: 350.ms, curve: Curves.easeOutCubic)
         .fadeIn(duration: 250.ms)
-        // Stay visible long enough to actually read at puzzle start.
         .then(delay: 10000.ms)
         .fadeOut(duration: 400.ms)
         .slideY(begin: 0, end: -0.2, duration: 400.ms);

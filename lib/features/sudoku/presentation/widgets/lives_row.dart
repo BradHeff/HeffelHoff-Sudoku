@@ -3,9 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../../core/theme/app_colors.dart';
 
-/// Three-heart lives row. On damage the lost heart scales up briefly
-/// then crumbles (fades + slight scale-down + tilt). Strong haptic
-/// fires from the controller, not from this widget.
+/// Three-heart lives row with crumble animation on damage.
 class LivesRow extends StatelessWidget {
   const LivesRow({super.key, required this.lives, required this.maxLives});
 
@@ -54,7 +52,6 @@ class _Heart extends StatelessWidget {
     );
     if (filled) return icon;
 
-    // Crumble animation when becoming empty.
     return icon
         .animate()
         .scale(

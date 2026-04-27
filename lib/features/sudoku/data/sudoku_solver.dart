@@ -1,13 +1,10 @@
 import '../../../core/util/seeded_random.dart';
 
-/// Sudoku solver utilities. Operates on flat 81-length `List<int>` grids
-/// where 0 = blank, 1..9 = digit. Pure logic, safe to run in an isolate.
+/// Sudoku solver. Operates on flat 81-length List<int> grids (0 = blank).
 class SudokuSolver {
   static const int boardSize = 81;
 
-  /// Returns true if [grid] satisfies all Sudoku constraints (each row,
-  /// column, and 3x3 box has the digits 1..9 with no repeats among the
-  /// non-zero values).
+  /// True if the grid breaks no Sudoku constraints.
   static bool isValid(List<int> grid) {
     for (var i = 0; i < 9; i++) {
       var rowMask = 0, colMask = 0, boxMask = 0;
@@ -37,9 +34,7 @@ class SudokuSolver {
     return true;
   }
 
-  /// Counts the number of distinct solutions of [grid], stopping early
-  /// once [limit] is reached. Returns the (capped) count. Used by the
-  /// generator to verify uniqueness during clue removal.
+  /// Counts solutions, capping at [limit]. Used to verify uniqueness.
   static int countSolutions(List<int> grid, {int limit = 2}) {
     final work = List<int>.from(grid);
     return _countSolutionsImpl(work, limit, 0);
@@ -66,9 +61,7 @@ class SudokuSolver {
     return found;
   }
 
-  /// Solve in-place using backtracking. Returns true if a solution exists.
-  /// Used as a one-shot solver (the generator uses [countSolutions]
-  /// directly for uniqueness checks).
+  /// Solve in-place via backtracking.
   static bool solveInPlace(List<int> grid) {
     final idx = _findMostConstrainedEmpty(grid);
     if (idx < 0) return true;
@@ -84,9 +77,8 @@ class SudokuSolver {
     return false;
   }
 
-  /// Build a fully-solved random valid grid using backtracking with a
-  /// seeded shuffle of the 1..9 candidate order at each step. The seed
-  /// makes generation reproducible.
+  /// Build a fully-solved valid grid, with the candidate order shuffled
+  /// per-cell from [rng] so the same seed reproduces the same grid.
   static List<int> randomFullGrid(SeededRandom rng) {
     final grid = List<int>.filled(81, 0);
     _fill(grid, 0, rng);
@@ -114,8 +106,7 @@ class SudokuSolver {
     return false;
   }
 
-  /// Returns a 10-bit mask where bit d (1..9) is set if d is a legal
-  /// digit at (row,col) given the current [grid].
+  /// 10-bit mask: bit d (1..9) = digit d is a legal candidate at (row,col).
   static int _candidates(List<int> grid, int row, int col) {
     var used = 0;
     for (var i = 0; i < 9; i++) {
@@ -129,12 +120,10 @@ class SudokuSolver {
         used |= 1 << grid[(br + dr) * 9 + bc + dc];
       }
     }
-    // Bit 0 (the zero "digit") is irrelevant; mask 1..9.
     return ~used & 0x3FE;
   }
 
-  /// Returns the index of the empty cell with the fewest candidates
-  /// (MRV heuristic), or -1 if the grid is full.
+  /// Index of the empty cell with the fewest candidates (MRV), or -1.
   static int _findMostConstrainedEmpty(List<int> grid) {
     var best = -1;
     var bestCount = 10;
