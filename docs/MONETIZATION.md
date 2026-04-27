@@ -11,7 +11,7 @@ To take real money you replace the mock with the real Apple / Google plumbing. T
 ### Account
 
 - **Apple Developer Program** — $99 / year. Sign up at https://developer.apple.com.
-- After approval (1–2 days), open **App Store Connect** → My Apps → **+** → New App. Bundle id = `com.heffelhoff.heffelhoff_sudoku` (already set in the Flutter project).
+- After approval (1–2 days), open **App Store Connect** → My Apps → **+** → New App. Bundle id = `com.heffelhoff.heffelhoff-sudoku` (iOS form; the Android applicationId is `com.heffelhoff.heffelhoffsudoku`).
 
 ### In-app products
 
