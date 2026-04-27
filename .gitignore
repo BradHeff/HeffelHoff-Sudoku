@@ -7,18 +7,55 @@
 .env.*
 !.env.example
 !.env.claude.md
+.envrc
+.envrc.local
 **/secrets/
+
+# Signing material (iOS + Android)
 *.pem
 *.p8
+*.p12
+*.cer
+*.mobileprovision
 *.keystore
 *.jks
+*.pkcs12
 android/key.properties
 android/app/upload-keystore.jks
-ios/Runner/GoogleService-Info.plist
-android/app/google-services.json
+android/app/release-keystore.jks
+android/app/keystore.properties
+
+# Firebase / Google service configs (have OAuth client IDs)
+**/google-services.json
+**/GoogleService-Info.plist
+**/firebase_options.dart
+**/firebase_app_id_file.json
+
+# Service-account JSON keys (Google Play receipt verification, Firebase admin, etc.)
+*service_account*.json
+*service-account*.json
+*-credentials.json
+playstore-key.json
+google-play-key.json
+
+# Supabase
 supabase/.env
 supabase/.env.*
 supabase/.temp/
+supabase/.branches/
+
+# Apple App Store Connect API keys
+AuthKey_*.p8
+
+# Generic AI / IDE chat & history (in case you use these on a machine that
+# clones this repo, don't leak the conversation log)
+.aider*
+.cursor/
+.continue/
+.codeium/
+.claude/
+.kilocode/
+.windsurf/
 
 # ---- Flutter / Dart ----
 .dart_tool/
@@ -46,9 +83,19 @@ build/
 # Coverage
 coverage/
 .lcov
+lcov.info
+**/lcov.info
 
 # Test outputs
 test/.test_coverage.dart
+
+# Python (tools/synth_sounds.py)
+__pycache__/
+*.pyc
+*.pyo
+.Python
+venv/
+.venv/
 
 # ---- iOS ----
 ios/Flutter/Flutter.framework/
@@ -82,6 +129,15 @@ android/app/profile/
 *.ipr
 *.iws
 
+# Build outputs at any path (in case someone copies an apk/aab/ipa
+# out of build/ into the tree to share)
+*.apk
+*.aab
+*.ipa
+*.app
+*.dSYM.zip
+*.dSYM
+
 # ---- IDE ----
 .idea/
 .vscode/
@@ -89,8 +145,13 @@ android/app/profile/
 !.vscode/settings.shared.json
 *.swp
 *.swo
+*.swn
 .DS_Store
+.AppleDouble
+.LSOverride
 Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
 
 # ---- Logs ----
 *.log
