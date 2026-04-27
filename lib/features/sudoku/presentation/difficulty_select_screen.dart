@@ -74,6 +74,11 @@ class DifficultySelectScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  IconButton(
+                    onPressed: () => context.go('/leaderboard'),
+                    icon: const Icon(Icons.emoji_events_outlined),
+                    tooltip: 'Leaderboard',
+                  ),
                   const _AccountAvatarButton(),
                 ],
               ),

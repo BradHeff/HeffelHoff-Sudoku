@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'features/leaderboard/presentation/leaderboard_screen.dart';
 import 'features/sudoku/domain/difficulty.dart';
 import 'features/sudoku/presentation/difficulty_select_screen.dart';
 import 'features/sudoku/presentation/game_screen.dart';
@@ -28,6 +29,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           );
           return GameScreen(difficulty: tier);
         },
+      ),
+      GoRoute(
+        path: '/leaderboard',
+        builder: (context, state) => const LeaderboardScreen(),
       ),
     ],
   );

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/audio/sound_service.dart';
+import '../data/attempts_repository.dart';
 import '../data/backtracking_generator.dart';
 import '../domain/board.dart';
 import '../domain/difficulty.dart';
@@ -18,16 +19,19 @@ class GameController extends StateNotifier<GameState> {
   GameController({
     required Difficulty difficulty,
     required SoundService sound,
+    required AttemptsRepository attempts,
     int? seed,
     int maxLives = 3,
   })  : _maxLives = maxLives,
         _sound = sound,
+        _attempts = attempts,
         super(GameLoading(difficulty: difficulty)) {
     _start(difficulty: difficulty, seed: seed);
   }
 
   final int _maxLives;
   final SoundService _sound;
+  final AttemptsRepository _attempts;
   Timer? _ticker;
   Timer? _digitCelebrationTimer;
 
@@ -287,6 +291,20 @@ class GameController extends StateNotifier<GameState> {
       _sound.play(
         wasUnderTarget ? SoundEvent.puzzleCompleteGenius : SoundEvent.puzzleComplete,
       );
+
+      // Phase 2/3: persist the attempt to Supabase so it shows up on
+      // the leaderboard. No-op if no user is signed in. Phase 5 swaps
+      // this for an Edge Function call with server-side IQ recompute.
+      unawaited(_attempts.submitWin(
+        puzzle: s.puzzle,
+        startedAt: s.startedAt,
+        timeSeconds: time,
+        mistakes: s.mistakes,
+        hintsUsed: s.hintsUsed,
+        livesUsed: s.maxLives - s.lives,
+        iqScore: iq.iqScore,
+      ));
+
       state = GameWon(
         puzzle: s.puzzle,
         timeSeconds: time,
@@ -381,5 +399,6 @@ final gameControllerProvider = StateNotifierProvider.autoDispose
     difficulty: args.difficulty,
     seed: args.seed,
     sound: ref.watch(soundServiceProvider),
+    attempts: ref.watch(attemptsRepositoryProvider),
   ),
 );
