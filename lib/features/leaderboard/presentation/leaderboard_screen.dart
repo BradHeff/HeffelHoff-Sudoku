@@ -8,20 +8,52 @@ import '../../auth/data/auth_repository.dart';
 import '../../sudoku/domain/difficulty.dart';
 import '../data/leaderboard_repository.dart';
 import '../domain/leaderboard_entry.dart';
-import 'widgets/podium_view.dart';
+import 'widgets/medallion_podium.dart';
+import 'widgets/rank_rosette.dart';
 
-/// Top-100 leaderboard with tier-chip filter, podium for ranks 1–3,
-/// and a list for ranks 4+. Uses Realtime so the list reorders live as
-/// new bests are submitted from any device.
+/// Optional payload passed via `context.go('/leaderboard', extra: ...)`
+/// when the user has just won a puzzle and is being routed here for the
+/// climb animation.
+class LeaderboardArrival {
+  const LeaderboardArrival({
+    required this.tier,
+    required this.userId,
+    required this.previousIq,
+    required this.newIq,
+  });
+
+  /// Tier to land on.
+  final Difficulty tier;
+  final String userId;
+  final int previousIq;
+  final int newIq;
+}
+
+/// Top-100 leaderboard with tier-chip filter, horizontal medallion
+/// podium for ranks 1-3, and a list of rosette-rank rows for 4+.
+/// Subscribes to Realtime so rankings reorder live.
+///
+/// When opened with [LeaderboardArrival] in route extras, plays a
+/// climb animation: the user's row pulses + their IQ counts up from
+/// the previous score to the new one. If the new IQ overtakes the
+/// row currently above, list reordering animates the swap.
 class LeaderboardScreen extends ConsumerStatefulWidget {
-  const LeaderboardScreen({super.key});
+  const LeaderboardScreen({super.key, this.arrival});
+
+  final LeaderboardArrival? arrival;
 
   @override
   ConsumerState<LeaderboardScreen> createState() => _LeaderboardScreenState();
 }
 
 class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
-  Difficulty _tier = Difficulty.easy;
+  late Difficulty _tier;
+
+  @override
+  void initState() {
+    super.initState();
+    _tier = widget.arrival?.tier ?? Difficulty.easy;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,17 +86,16 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
               selected: _tier,
               onSelect: (t) => setState(() => _tier = t),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () async {
                   ref.invalidate(leaderboardStreamProvider(_tier));
-                  // Wait briefly so the spinner shows even when the
-                  // re-fetch is instant.
                   await Future<void>.delayed(const Duration(milliseconds: 400));
                 },
                 child: stream.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
                   error: (e, _) => ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     children: [
@@ -75,6 +106,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                   data: (entries) => _LeaderboardBody(
                     entries: entries,
                     currentUserId: currentUser?.id,
+                    arrival: widget.arrival?.tier == _tier ? widget.arrival : null,
                   ),
                 ),
               ),
@@ -116,10 +148,15 @@ class _TierChips extends StatelessWidget {
 }
 
 class _LeaderboardBody extends StatelessWidget {
-  const _LeaderboardBody({required this.entries, required this.currentUserId});
+  const _LeaderboardBody({
+    required this.entries,
+    required this.currentUserId,
+    required this.arrival,
+  });
 
   final List<LeaderboardEntry> entries;
   final String? currentUserId;
+  final LeaderboardArrival? arrival;
 
   @override
   Widget build(BuildContext context) {
@@ -129,11 +166,12 @@ class _LeaderboardBody extends StatelessWidget {
     final rest = entries.skip(3).toList();
 
     return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      physics: const AlwaysScrollableScrollPhysics(),
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(0, 8, 0, 16),
-          child: PodiumView(entries: top3, currentUserId: currentUserId),
+          padding: const EdgeInsets.only(bottom: 8),
+          child: MedallionPodium(entries: top3, currentUserId: currentUserId),
         ),
         if (rest.isNotEmpty) ...[
           const _ListHeader(),
@@ -142,6 +180,7 @@ class _LeaderboardBody extends StatelessWidget {
               rank: i + 4,
               entry: rest[i],
               isCurrentUser: rest[i].userId == currentUserId,
+              arrival: rest[i].userId == arrival?.userId ? arrival : null,
             ).animate(delay: (40 * i).ms).fadeIn(duration: 200.ms).slideX(begin: 0.05),
         ],
         const SizedBox(height: 16),
@@ -158,7 +197,7 @@ class _ListHeader extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+      padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
       child: Row(
         children: [
           SizedBox(
@@ -198,11 +237,13 @@ class _RankRow extends StatelessWidget {
     required this.rank,
     required this.entry,
     required this.isCurrentUser,
+    required this.arrival,
   });
 
   final int rank;
   final LeaderboardEntry entry;
   final bool isCurrentUser;
+  final LeaderboardArrival? arrival;
 
   @override
   Widget build(BuildContext context) {
@@ -213,14 +254,47 @@ class _RankRow extends StatelessWidget {
     final mins = (entry.bestTimeSeconds ~/ 60).toString().padLeft(2, '0');
     final secs = (entry.bestTimeSeconds % 60).toString().padLeft(2, '0');
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 2),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+    final rosetteColor =
+        isCurrentUser ? scheme.primary : scheme.surfaceContainerHigh;
+
+    Widget iqText;
+    if (arrival != null) {
+      // Fresh-win arrival: count IQ up from previous to new.
+      iqText = TweenAnimationBuilder<double>(
+        tween: Tween(
+          begin: arrival!.previousIq.toDouble(),
+          end: arrival!.newIq.toDouble(),
+        ),
+        duration: const Duration(milliseconds: 1400),
+        curve: Curves.easeOutCubic,
+        builder: (context, value, _) => Text(
+          '${value.round()}',
+          textAlign: TextAlign.right,
+          style: text.titleSmall?.copyWith(
+            color: entry.bestIq >= 160 ? palette.goldFrame.first : scheme.primary,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      );
+    } else {
+      iqText = Text(
+        '${entry.bestIq}',
+        textAlign: TextAlign.right,
+        style: text.titleSmall?.copyWith(
+          color: entry.bestIq >= 160 ? palette.goldFrame.first : scheme.primary,
+          fontWeight: FontWeight.w800,
+        ),
+      );
+    }
+
+    Widget row = Container(
+      margin: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
         color: isCurrentUser
             ? scheme.primary.withValues(alpha: 0.18)
             : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         border: isCurrentUser
             ? Border.all(color: scheme.primary.withValues(alpha: 0.6))
             : null,
@@ -229,33 +303,16 @@ class _RankRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 40,
-            child: Text(
-              '$rank',
-              style: text.bodyMedium?.copyWith(
-                color: scheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
+            child: Center(
+              child: RankRosette(
+                rank: rank,
+                size: 32,
+                color: rosetteColor,
+                highlight: isCurrentUser,
               ),
             ),
           ),
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: scheme.surfaceContainerHigh,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              entry.displayName.isNotEmpty
-                  ? entry.displayName[0].toUpperCase()
-                  : '?',
-              style: text.titleSmall?.copyWith(
-                color: scheme.primary,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               entry.displayName,
@@ -266,17 +323,7 @@ class _RankRow extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(
-            width: 60,
-            child: Text(
-              '${entry.bestIq}',
-              textAlign: TextAlign.right,
-              style: text.titleSmall?.copyWith(
-                color: entry.bestIq >= 160 ? palette.goldFrame.first : scheme.primary,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
+          SizedBox(width: 60, child: iqText),
           SizedBox(
             width: 64,
             child: Text(
@@ -288,6 +335,19 @@ class _RankRow extends StatelessWidget {
         ],
       ),
     );
+
+    // Climb arrival: pulse the row briefly so the user's eye catches it.
+    if (arrival != null) {
+      row = row
+          .animate()
+          .fadeIn(duration: 300.ms)
+          .then(delay: 100.ms)
+          .scaleXY(end: 1.04, duration: 600.ms, curve: Curves.easeOutBack)
+          .then()
+          .scaleXY(end: 1.0, duration: 400.ms);
+    }
+
+    return row;
   }
 }
 
@@ -328,16 +388,9 @@ class _ErrorView extends StatelessWidget {
   const _ErrorView({required this.message});
   final String message;
 
-  /// Common Supabase failure modes get a friendlier translation; raw
-  /// error otherwise.
   ({String title, String body, IconData icon}) get _humanised {
     final lower = message.toLowerCase();
 
-    // PGRST205 = relation not in PostgREST schema cache. Either:
-    //  - the migration hasn't been run yet, OR
-    //  - the migration HAS been run but PostgREST's schema cache is
-    //    stale (it lazily refreshes every few minutes; can be forced
-    //    via `NOTIFY pgrst, 'reload schema';` in the SQL editor).
     if (lower.contains('pgrst205') ||
         (lower.contains('schema cache') && lower.contains('leaderboard'))) {
       return (
@@ -352,9 +405,6 @@ class _ErrorView extends StatelessWidget {
       );
     }
 
-    // PGRST200 = relationship not found between two tables. Almost
-    // always means the leaderboard ↔ profiles direct FK is missing
-    // (added by 0004_leaderboard_profiles_fk.sql).
     if (lower.contains('pgrst200') ||
         lower.contains('could not find a relationship')) {
       return (

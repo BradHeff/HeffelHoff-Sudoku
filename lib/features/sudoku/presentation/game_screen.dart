@@ -4,6 +4,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../auth/data/auth_repository.dart';
+import '../../leaderboard/presentation/leaderboard_screen.dart';
 import '../application/game_controller.dart';
 import '../domain/difficulty.dart';
 import '../domain/game_state.dart';
@@ -54,6 +56,25 @@ class GameScreen extends ConsumerWidget {
               wasUnderTarget: w.wasUnderTarget,
               onPlayAgain: replay,
               onBackToStart: () => context.go('/'),
+              onNext: () {
+                final user = ref.read(authStateProvider).asData?.value;
+                if (user == null) {
+                  // Not signed in → leaderboard with no climb anim.
+                  context.go('/leaderboard');
+                  return;
+                }
+                context.go(
+                  '/leaderboard',
+                  extra: LeaderboardArrival(
+                    tier: w.puzzle.difficulty,
+                    userId: user.id,
+                    // Previous IQ unknown without a pre-fetch; use a
+                    // 0 baseline so the count-up always plays.
+                    previousIq: 0,
+                    newIq: w.iqScore,
+                  ),
+                );
+              },
             ),
           final GameLost l => PostGameIqScreen(
               puzzle: l.puzzle,
