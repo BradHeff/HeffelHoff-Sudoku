@@ -2,7 +2,7 @@
 
 A Flutter mobile Sudoku game (iOS + Android) with Supabase-backed accounts, a tiered leaderboard, per-puzzle "IQ" scores compared to Einstein's 160, and a top-3 podium designed to make every other player want to be on it.
 
-The full implementation plan lives at [`docs/PLAN.md`](docs/PLAN.md). Read it first.
+The full implementation plan lives at [`docs/PLAN.md`](docs/PLAN.md). Branding (logo usage, color palette, animation/typography rules) lives at [`docs/BRANDING.md`](docs/BRANDING.md). Read those first.
 
 ---
 
