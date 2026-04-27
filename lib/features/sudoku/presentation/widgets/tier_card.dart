@@ -112,7 +112,7 @@ class _TierCardState extends State<TierCard> with SingleTickerProviderStateMixin
     final palette = Theme.of(context).extension<AppPalette>()!;
     final text = Theme.of(context).textTheme;
 
-    final cardHeight = 92.0 + (style.intensity * 6);
+    final cardHeight = 78.0 + (style.intensity * 4);
 
     return GestureDetector(
       onTap: widget.onTap,
@@ -187,7 +187,7 @@ class _TierCardState extends State<TierCard> with SingleTickerProviderStateMixin
                       ),
 
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       child: Row(
                         children: [
                           _TierIcon(style: style, palette: palette),
@@ -253,8 +253,8 @@ class _TierIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget icon = Container(
-      width: 52,
-      height: 52,
+      width: 46,
+      height: 46,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -264,7 +264,7 @@ class _TierIcon extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: style.accent.first.withValues(alpha: 0.55),
           width: 1.2,
@@ -273,7 +273,7 @@ class _TierIcon extends StatelessWidget {
       alignment: Alignment.center,
       child: ShaderMask(
         shaderCallback: (rect) => LinearGradient(colors: style.accent).createShader(rect),
-        child: Icon(style.icon, color: Colors.white, size: 28),
+        child: Icon(style.icon, color: Colors.white, size: 24),
       ),
     );
 
@@ -291,8 +291,8 @@ class _TierIcon extends StatelessWidget {
     // Decorative orbiting dot for Master+ (intensity ≥ 3).
     if (style.intensity >= 3) {
       icon = SizedBox(
-        width: 60,
-        height: 60,
+        width: 54,
+        height: 54,
         child: Stack(
           alignment: Alignment.center,
           children: [

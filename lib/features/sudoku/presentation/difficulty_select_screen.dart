@@ -21,17 +21,16 @@ class DifficultySelectScreen extends ConsumerWidget {
     return Scaffold(
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 12),
               // Brand logo + wordmark hero block.
               Row(
                 children: [
                   Container(
-                    width: 64,
-                    height: 64,
+                    width: 56,
+                    height: 56,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       boxShadow: [
@@ -93,18 +92,20 @@ class DifficultySelectScreen extends ConsumerWidget {
                   const _AccountAvatarButton(),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Text(
                 'Pick your difficulty.',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: scheme.onSurfaceVariant,
                     ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 14),
               Expanded(
                 child: ListView.separated(
+                  padding: EdgeInsets.zero,
+                  physics: const ClampingScrollPhysics(),
                   itemCount: Difficulty.values.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 14),
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (context, i) {
                     final tier = Difficulty.values[i];
                     return TierCard(
@@ -113,14 +114,6 @@ class DifficultySelectScreen extends ConsumerWidget {
                     ).animate(delay: (80 * i).ms).fadeIn(duration: 300.ms).slideX(begin: 0.1);
                   },
                 ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Phase 1 — offline single-player. Sign-in & leaderboard land in Phase 2/3.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                textAlign: TextAlign.center,
               ),
             ],
           ),
