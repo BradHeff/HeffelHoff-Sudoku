@@ -1,4 +1,4 @@
-package com.heffelhoff.heffelhoff_sudoku
+package com.heffelhoff.heffelhoffsudoku
 
 import io.flutter.embedding.android.FlutterActivity
 

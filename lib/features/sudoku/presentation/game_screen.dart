@@ -47,43 +47,47 @@ class GameScreen extends ConsumerWidget {
           GameError(:final message) => _ErrorView(message: message),
           final GameOngoing s => _OngoingView(state: s, controller: controller),
           final GameOutOfLives g => _OutOfLivesView(state: g, controller: controller),
-          final GameWon w => PostGameIqScreen(
-              puzzle: w.puzzle,
-              timeSeconds: w.timeSeconds,
-              mistakes: w.mistakes,
-              hintsUsed: w.hintsUsed,
-              iqScore: w.iqScore,
-              won: true,
-              wasUnderTarget: w.wasUnderTarget,
-              onPlayAgain: replay,
-              onBackToStart: () => context.go('/'),
-              onNext: () {
-                final user = ref.read(authStateProvider).asData?.value;
-                if (user == null) {
-                  context.go('/leaderboard');
-                  return;
-                }
-                context.go(
-                  '/leaderboard',
-                  extra: LeaderboardArrival(
-                    tier: w.puzzle.difficulty,
-                    userId: user.id,
-                    previousIq: 0,
-                    newIq: w.iqScore,
-                  ),
-                );
-              },
+          final GameWon w => _CompletionInterstitialGate(
+              child: PostGameIqScreen(
+                puzzle: w.puzzle,
+                timeSeconds: w.timeSeconds,
+                mistakes: w.mistakes,
+                hintsUsed: w.hintsUsed,
+                iqScore: w.iqScore,
+                won: true,
+                wasUnderTarget: w.wasUnderTarget,
+                onPlayAgain: replay,
+                onBackToStart: () => context.go('/'),
+                onNext: () {
+                  final user = ref.read(authStateProvider).asData?.value;
+                  if (user == null) {
+                    context.go('/leaderboard');
+                    return;
+                  }
+                  context.go(
+                    '/leaderboard',
+                    extra: LeaderboardArrival(
+                      tier: w.puzzle.difficulty,
+                      userId: user.id,
+                      previousIq: 0,
+                      newIq: w.iqScore,
+                    ),
+                  );
+                },
+              ),
             ),
-          final GameLost l => PostGameIqScreen(
-              puzzle: l.puzzle,
-              timeSeconds: l.timeSeconds,
-              mistakes: l.mistakes,
-              hintsUsed: 0,
-              iqScore: 0,
-              won: false,
-              wasUnderTarget: false,
-              onPlayAgain: replay,
-              onBackToStart: () => context.go('/'),
+          final GameLost l => _CompletionInterstitialGate(
+              child: PostGameIqScreen(
+                puzzle: l.puzzle,
+                timeSeconds: l.timeSeconds,
+                mistakes: l.mistakes,
+                hintsUsed: 0,
+                iqScore: 0,
+                won: false,
+                wasUnderTarget: false,
+                onPlayAgain: replay,
+                onBackToStart: () => context.go('/'),
+              ),
             ),
         },
       ),
@@ -561,4 +565,31 @@ class _ToolButton extends StatelessWidget {
       ),
     ).animate(target: badgeOn ? 1 : 0).scaleXY(end: 1.05, duration: 120.ms);
   }
+}
+
+/// Wraps the post-game screen and asks the monetization service to
+/// maybe show an interstitial ad on first build. Throttled to every
+/// Nth completion by InterstitialAdService — ad won't show every game.
+class _CompletionInterstitialGate extends ConsumerStatefulWidget {
+  const _CompletionInterstitialGate({required this.child});
+
+  final Widget child;
+
+  @override
+  ConsumerState<_CompletionInterstitialGate> createState() =>
+      _CompletionInterstitialGateState();
+}
+
+class _CompletionInterstitialGateState
+    extends ConsumerState<_CompletionInterstitialGate> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(monetizationServiceProvider).maybeShowCompletionAd();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
