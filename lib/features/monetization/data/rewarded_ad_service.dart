@@ -15,20 +15,29 @@ class AdMobRewardedAdService implements RewardedAdService {
   static const _testAndroid = 'ca-app-pub-3940256099942544/5224354917';
   static const _testIos = 'ca-app-pub-3940256099942544/1712485313';
 
-  static const _prodAndroid = String.fromEnvironment(
+  static const _prodAndroid = 'ca-app-pub-7297042648861877/7686622785';
+  static const _prodIos = '';
+
+  static const _overrideAndroid = String.fromEnvironment(
     'ADMOB_REWARDED_ANDROID',
     defaultValue: '',
   );
-  static const _prodIos = String.fromEnvironment(
+  static const _overrideIos = String.fromEnvironment(
     'ADMOB_REWARDED_IOS',
     defaultValue: '',
   );
 
   String get _adUnitId {
+    if (kDebugMode) {
+      if (Platform.isIOS) return _testIos;
+      return _testAndroid;
+    }
     if (Platform.isAndroid) {
+      if (_overrideAndroid.isNotEmpty) return _overrideAndroid;
       return _prodAndroid.isEmpty ? _testAndroid : _prodAndroid;
     }
     if (Platform.isIOS) {
+      if (_overrideIos.isNotEmpty) return _overrideIos;
       return _prodIos.isEmpty ? _testIos : _prodIos;
     }
     return _testAndroid;
