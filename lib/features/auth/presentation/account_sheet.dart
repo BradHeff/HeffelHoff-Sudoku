@@ -32,7 +32,7 @@ class _AccountSheetBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authStateProvider);
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
         child: auth.when(
           loading: () => const Padding(
@@ -91,12 +91,30 @@ class _SignInFormState extends ConsumerState<_SignInForm> {
       if (!mounted) return;
       Navigator.of(context).pop();
     } on AuthException catch (e) {
-      setState(() => _error = e.message);
+      setState(() => _error = _humaniseAuthError(e.message));
     } catch (e) {
       setState(() => _error = '$e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Adds a hint when the error is one we know has a one-flag fix in
+  /// the Supabase dashboard.
+  static String _humaniseAuthError(String raw) {
+    final lower = raw.toLowerCase();
+    if (lower.contains('email not confirmed')) {
+      return 'Email not confirmed yet. While iterating, ask your '
+          "admin to disable Authentication → Providers → Email → "
+          '"Confirm email" in the Supabase dashboard, or use '
+          '"Continue as guest" below.';
+    }
+    if (lower.contains('anonymous') && lower.contains('disabled')) {
+      return 'Anonymous sign-in is disabled. Enable it at '
+          'Authentication → Providers → Anonymous Sign-Ins in the '
+          'Supabase dashboard.';
+    }
+    return raw;
   }
 
   Future<void> _continueAsGuest() async {
@@ -110,7 +128,7 @@ class _SignInFormState extends ConsumerState<_SignInForm> {
       if (!mounted) return;
       Navigator.of(context).pop();
     } on AuthException catch (e) {
-      setState(() => _error = e.message);
+      setState(() => _error = _humaniseAuthError(e.message));
     } catch (e) {
       setState(() => _error = '$e');
     } finally {

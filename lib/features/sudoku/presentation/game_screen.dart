@@ -31,6 +31,13 @@ class GameScreen extends ConsumerWidget {
     final state = ref.watch(gameControllerProvider(providerArgs));
     final controller = ref.read(gameControllerProvider(providerArgs).notifier);
 
+    // Force a fresh GameController instance on Play Again. Same route +
+    // same family key (difficulty, seed:null) returns the cached
+    // notifier still in GameWon/Lost — so we explicitly invalidate.
+    void replay() {
+      ref.invalidate(gameControllerProvider(providerArgs));
+    }
+
     return Scaffold(
       body: SafeArea(
         child: switch (state) {
@@ -45,7 +52,7 @@ class GameScreen extends ConsumerWidget {
               iqScore: w.iqScore,
               won: true,
               wasUnderTarget: w.wasUnderTarget,
-              onPlayAgain: () => context.go('/game/${difficulty.id}'),
+              onPlayAgain: replay,
               onBackToStart: () => context.go('/'),
             ),
           final GameLost l => PostGameIqScreen(
@@ -56,7 +63,7 @@ class GameScreen extends ConsumerWidget {
               iqScore: 0,
               won: false,
               wasUnderTarget: false,
-              onPlayAgain: () => context.go('/game/${difficulty.id}'),
+              onPlayAgain: replay,
               onBackToStart: () => context.go('/'),
             ),
         },
@@ -180,7 +187,7 @@ class _OngoingViewState extends State<_OngoingView> {
                 paused: state.paused,
               ),
               const SizedBox(height: 12),
-              const PeerSolveBanner(solveRatePercent: null),
+              PeerSolveBanner(puzzleSeed: state.puzzle.seed),
               const SizedBox(height: 12),
               Stack(
                 clipBehavior: Clip.none,

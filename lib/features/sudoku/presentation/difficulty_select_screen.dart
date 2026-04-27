@@ -8,6 +8,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../auth/presentation/account_sheet.dart';
 import '../domain/difficulty.dart';
+import 'widgets/tier_card.dart';
 
 class DifficultySelectScreen extends ConsumerWidget {
   const DifficultySelectScreen({super.key});
@@ -52,23 +53,33 @@ class DifficultySelectScreen extends ConsumerWidget {
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           'HEFFELHOFF',
                           style: iqDisplayStyle(
                             context,
-                            size: 14,
+                            size: 12,
                             color: scheme.onSurfaceVariant,
-                          ).copyWith(letterSpacing: 4, fontWeight: FontWeight.w400),
+                          ).copyWith(letterSpacing: 3, fontWeight: FontWeight.w400),
                         ),
-                        ShaderMask(
-                          shaderCallback: (rect) => LinearGradient(
-                            colors: palette.iqGenius,
-                          ).createShader(rect),
-                          child: Text(
-                            'SUDOKU',
-                            style: iqDisplayStyle(context, size: 40, color: Colors.white)
-                                .copyWith(letterSpacing: 4, fontWeight: FontWeight.w900),
+                        // FittedBox ensures the wordmark scales down to
+                        // fit the available width and never wraps.
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: ShaderMask(
+                            shaderCallback: (rect) => LinearGradient(
+                              colors: palette.iqGenius,
+                            ).createShader(rect),
+                            child: Text(
+                              'SUDOKU',
+                              maxLines: 1,
+                              softWrap: false,
+                              overflow: TextOverflow.visible,
+                              style: iqDisplayStyle(context, size: 36, color: Colors.white)
+                                  .copyWith(letterSpacing: 3, fontWeight: FontWeight.w900),
+                            ),
                           ),
                         ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.2),
                       ],
@@ -93,10 +104,10 @@ class DifficultySelectScreen extends ConsumerWidget {
               Expanded(
                 child: ListView.separated(
                   itemCount: Difficulty.values.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  separatorBuilder: (_, __) => const SizedBox(height: 14),
                   itemBuilder: (context, i) {
                     final tier = Difficulty.values[i];
-                    return _DifficultyCard(
+                    return TierCard(
                       tier: tier,
                       onTap: () => context.go('/game/${tier.id}'),
                     ).animate(delay: (80 * i).ms).fadeIn(duration: 300.ms).slideX(begin: 0.1);
@@ -119,69 +130,6 @@ class DifficultySelectScreen extends ConsumerWidget {
   }
 }
 
-class _DifficultyCard extends StatelessWidget {
-  const _DifficultyCard({required this.tier, required this.onTap});
-
-  final Difficulty tier;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
-
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: scheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  tier.label[0],
-                  style: text.headlineSmall?.copyWith(
-                    color: scheme.onPrimaryContainer,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(tier.label, style: text.titleLarge),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Base IQ ${tier.baseIQ} · target ${_fmt(tier.targetTimeSeconds)}',
-                      style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  static String _fmt(int seconds) {
-    final m = seconds ~/ 60;
-    final s = seconds % 60;
-    return s == 0 ? '${m}m' : '${m}m ${s}s';
-  }
-}
 
 /// Avatar button on the home screen header. Shows the first letter of
 /// the signed-in user's email (or a person icon if anonymous / not
