@@ -8,7 +8,7 @@ import '../../auth/data/auth_repository.dart';
 import '../../sudoku/domain/difficulty.dart';
 import '../data/leaderboard_repository.dart';
 import '../domain/leaderboard_entry.dart';
-import 'widgets/medallion_podium.dart';
+import 'widgets/leaderboard_header.dart';
 import 'widgets/rank_rosette.dart';
 
 /// Optional payload passed via `context.go('/leaderboard', extra: ...)`
@@ -160,28 +160,26 @@ class _LeaderboardBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (entries.isEmpty) return const _EmptyLeaderboard();
-
-    final top3 = entries.take(3).toList();
-    final rest = entries.skip(3).toList();
-
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: MedallionPodium(entries: top3, currentUserId: currentUserId),
+        // Header banner (decorative — no entry data bound to it).
+        const Padding(
+          padding: EdgeInsets.only(bottom: 16),
+          child: LeaderboardHeader(),
         ),
-        if (rest.isNotEmpty) ...[
+        if (entries.isEmpty)
+          const _EmptyLeaderboard()
+        else ...[
           const _ListHeader(),
-          for (var i = 0; i < rest.length; i++)
+          for (var i = 0; i < entries.length; i++)
             _RankRow(
-              rank: i + 4,
-              entry: rest[i],
-              isCurrentUser: rest[i].userId == currentUserId,
-              arrival: rest[i].userId == arrival?.userId ? arrival : null,
-            ).animate(delay: (40 * i).ms).fadeIn(duration: 200.ms).slideX(begin: 0.05),
+              rank: i + 1,
+              entry: entries[i],
+              isCurrentUser: entries[i].userId == currentUserId,
+              arrival: entries[i].userId == arrival?.userId ? arrival : null,
+            ).animate(delay: (35 * i).ms).fadeIn(duration: 200.ms).slideX(begin: 0.05),
         ],
         const SizedBox(height: 16),
       ],
@@ -254,8 +252,20 @@ class _RankRow extends StatelessWidget {
     final mins = (entry.bestTimeSeconds ~/ 60).toString().padLeft(2, '0');
     final secs = (entry.bestTimeSeconds % 60).toString().padLeft(2, '0');
 
-    final rosetteColor =
-        isCurrentUser ? scheme.primary : scheme.surfaceContainerHigh;
+    // Rosette tinting: gold/silver/bronze for top 3, otherwise primary
+    // (or a neutral surface for non-current-user ranks 4+).
+    final Color rosetteColor;
+    if (rank == 1) {
+      rosetteColor = palette.goldFrame.first;
+    } else if (rank == 2) {
+      rosetteColor = palette.silverFrame.first;
+    } else if (rank == 3) {
+      rosetteColor = palette.bronzeFrame.first;
+    } else if (isCurrentUser) {
+      rosetteColor = scheme.primary;
+    } else {
+      rosetteColor = scheme.surfaceContainerHigh;
+    }
 
     Widget iqText;
     if (arrival != null) {
