@@ -31,6 +31,10 @@ class _TierStyle {
   /// 0 = static card, 4 = full glow + particle aura + shimmer.
   final int intensity;
 
+  /// Minimum card height — also the relative weight when distributing
+  /// extra vertical space across cards on tall screens.
+  int get minHeight => 78 + intensity * 4;
+
   static const Map<Difficulty, _TierStyle> values = {
     Difficulty.easy: _TierStyle(
       rankLabel: 'BEGINNER',
@@ -76,10 +80,21 @@ class TierCard extends StatefulWidget {
     super.key,
     required this.tier,
     required this.onTap,
+    this.height,
   });
 
   final Difficulty tier;
   final VoidCallback onTap;
+
+  /// Optional explicit height. When null falls back to the per-tier
+  /// minHeight. Pass a value when laying out in a LayoutBuilder that
+  /// distributes free vertical space across multiple cards.
+  final double? height;
+
+  /// Per-tier minimum height (used as flex weight when distributing
+  /// remaining space across the difficulty list).
+  static int minHeightFor(Difficulty tier) =>
+      _TierStyle.values[tier]!.minHeight;
 
   @override
   State<TierCard> createState() => _TierCardState();
@@ -112,13 +127,13 @@ class _TierCardState extends State<TierCard> with SingleTickerProviderStateMixin
     final palette = Theme.of(context).extension<AppPalette>()!;
     final text = Theme.of(context).textTheme;
 
-    final cardHeight = 78.0 + (style.intensity * 4);
+    final h = widget.height ?? style.minHeight.toDouble();
 
     return GestureDetector(
       onTap: widget.onTap,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        height: cardHeight,
+        height: h,
         child: Stack(
           clipBehavior: Clip.none,
           children: [
