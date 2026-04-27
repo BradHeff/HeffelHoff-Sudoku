@@ -33,6 +33,8 @@ class GameOngoing extends GameState {
     required this.startedAt,
     required this.pencilMode,
     required this.paused,
+    this.lastCompletedDigit,
+    this.lastCompletedAt,
   });
 
   final Puzzle puzzle;
@@ -50,6 +52,16 @@ class GameOngoing extends GameState {
   final bool pencilMode;
   final bool paused;
 
+  /// Set when the player has just placed the 9th correct instance of a
+  /// digit, completing it across the board. Cleared by the controller
+  /// after the celebration animation finishes (~1500ms).
+  final int? lastCompletedDigit;
+
+  /// Monotonic timestamp the celebration was triggered. Used as a
+  /// keying value so animations re-fire if the same digit is somehow
+  /// completed twice (e.g. erase-then-replace).
+  final DateTime? lastCompletedAt;
+
   bool get hasLives => lives > 0;
   Difficulty get difficulty => puzzle.difficulty;
 
@@ -63,6 +75,9 @@ class GameOngoing extends GameState {
     Duration? elapsed,
     bool? pencilMode,
     bool? paused,
+    int? lastCompletedDigit,
+    DateTime? lastCompletedAt,
+    bool clearLastCompleted = false,
   }) {
     return GameOngoing(
       puzzle: puzzle,
@@ -76,6 +91,10 @@ class GameOngoing extends GameState {
       startedAt: startedAt,
       pencilMode: pencilMode ?? this.pencilMode,
       paused: paused ?? this.paused,
+      lastCompletedDigit:
+          clearLastCompleted ? null : (lastCompletedDigit ?? this.lastCompletedDigit),
+      lastCompletedAt:
+          clearLastCompleted ? null : (lastCompletedAt ?? this.lastCompletedAt),
     );
   }
 }

@@ -15,6 +15,8 @@ class CellWidget extends StatelessWidget {
     required this.isPeerHighlighted,
     required this.isSameDigitHighlighted,
     required this.onTap,
+    this.celebrate = false,
+    this.celebrateKey,
   });
 
   final Cell cell;
@@ -22,6 +24,12 @@ class CellWidget extends StatelessWidget {
   final bool isPeerHighlighted;
   final bool isSameDigitHighlighted;
   final VoidCallback onTap;
+
+  /// True when this cell's value matches the digit the player just
+  /// completed across the whole board. Triggers a one-shot golden
+  /// shimmer pulse re-keyed on [celebrateKey].
+  final bool celebrate;
+  final Object? celebrateKey;
 
   @override
   Widget build(BuildContext context) {
@@ -87,6 +95,21 @@ class CellWidget extends StatelessWidget {
           .shake(hz: 6, curve: Curves.elasticOut, duration: 280.ms, offset: const Offset(8, 0))
           .then()
           .tint(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.18), duration: 220.ms);
+    }
+
+    // Digit-complete celebration: golden tint sweep + scale bounce.
+    if (celebrate && !cell.isWrong) {
+      cellBox = cellBox
+          .animate(key: ValueKey('celebrate-${cell.row}-${cell.col}-$celebrateKey'))
+          .tint(
+            color: const Color(0xFFFFD700).withValues(alpha: 0.55),
+            duration: 220.ms,
+            curve: Curves.easeOut,
+          )
+          .scaleXY(end: 1.12, duration: 220.ms, curve: Curves.easeOutBack)
+          .then()
+          .tint(color: Colors.transparent, duration: 350.ms)
+          .scaleXY(end: 1.0, duration: 350.ms, curve: Curves.easeIn);
     }
 
     return GestureDetector(

@@ -22,6 +22,11 @@ class GameController extends StateNotifier<GameState> {
 
   final int _maxLives;
   Timer? _ticker;
+  Timer? _digitCelebrationTimer;
+
+  /// How long the digit-complete celebration stays on screen before
+  /// being cleared.
+  static const Duration kDigitCelebrationDuration = Duration(milliseconds: 1500);
 
   Future<void> _start({required Difficulty difficulty, int? seed}) async {
     final s = seed ?? DateTime.now().millisecondsSinceEpoch;
@@ -112,7 +117,7 @@ class GameController extends StateNotifier<GameState> {
     final correct = s.puzzle.isCorrect(row: sel.row, col: sel.col, value: digit);
     if (correct) {
       final next = s.board.withCell(cell.copyWith(value: digit, pencilMarks: 0, isWrong: false));
-      _afterPlacement(s, next);
+      _afterPlacement(s, next, placedDigit: digit);
       return true;
     }
 
@@ -172,10 +177,13 @@ class GameController extends StateNotifier<GameState> {
     final next = s.board.withCell(
       cell.copyWith(value: correct, pencilMarks: 0, isWrong: false),
     );
-    _afterPlacement(s.copyWith(hintsUsed: s.hintsUsed + 1), next);
+    _afterPlacement(s.copyWith(hintsUsed: s.hintsUsed + 1), next, placedDigit: correct);
   }
 
-  void _afterPlacement(GameOngoing s, Board next) {
+  /// Called after a *correct* placement of [placedDigit] on [next]. Detects
+  /// when the placement was the 9th instance of that digit (transition
+  /// 8→9) and fires the digit-complete celebration.
+  void _afterPlacement(GameOngoing s, Board next, {required int placedDigit}) {
     if (next.isFull) {
       _stopTicker();
       final time = s.elapsed.inSeconds;
@@ -193,6 +201,25 @@ class GameController extends StateNotifier<GameState> {
         livesRemaining: s.lives,
         iqScore: iq.iqScore,
       );
+      return;
+    }
+
+    // Detect the 8 → 9 transition for the placed digit.
+    final wasComplete = s.board.countDigit(placedDigit) == 9;
+    final nowComplete = next.countDigit(placedDigit) == 9;
+    if (!wasComplete && nowComplete) {
+      _digitCelebrationTimer?.cancel();
+      state = s.copyWith(
+        board: next,
+        lastCompletedDigit: placedDigit,
+        lastCompletedAt: DateTime.now(),
+      );
+      _digitCelebrationTimer = Timer(kDigitCelebrationDuration, () {
+        final cur = state;
+        if (cur is GameOngoing && cur.lastCompletedDigit == placedDigit) {
+          state = cur.copyWith(clearLastCompleted: true);
+        }
+      });
     } else {
       state = s.copyWith(board: next);
     }
@@ -206,6 +233,7 @@ class GameController extends StateNotifier<GameState> {
   @override
   void dispose() {
     _stopTicker();
+    _digitCelebrationTimer?.cancel();
     super.dispose();
   }
 }
