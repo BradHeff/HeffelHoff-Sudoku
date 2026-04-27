@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/backtracking_generator.dart';
 import '../domain/board.dart';
-import '../domain/cell.dart';
 import '../domain/difficulty.dart';
 import '../domain/game_state.dart';
 import '../domain/puzzle.dart';
@@ -49,7 +48,7 @@ class GameController extends StateNotifier<GameState> {
       if (kDebugMode) {
         debugPrint('Generator failed: $e\n$st');
       }
-      state = GameError('Could not generate a puzzle. Please try again.');
+      state = const GameError('Could not generate a puzzle. Please try again.');
     }
   }
 
