@@ -4,9 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../domain/board.dart';
 import 'cell_widget.dart';
 
-/// 9×9 board. Computes peer-highlight (same row/col/box) and same-digit
-/// highlight masks once per build and passes them down to each cell.
-/// Renders thick borders between 3×3 boxes.
+/// 9×9 Sudoku board.
 class BoardWidget extends StatelessWidget {
   const BoardWidget({
     super.key,
@@ -25,15 +23,7 @@ class BoardWidget extends StatelessWidget {
   final ({int row, int col})? selected;
   final void Function(int row, int col) onCellTap;
 
-  /// Digit being highlighted across the whole board (every matching cell
-  /// gets the same-digit wash). When non-null, overrides the
-  /// derive-from-selection behavior.
   final int? highlightedDigit;
-
-  /// Cells matching any of these structures play a one-shot golden
-  /// shimmer keyed on [celebrateKey]. A single placement can fire any
-  /// combination of the four (e.g. row+col+box on a corner cell that
-  /// also happened to be the 9th instance of its digit).
   final int? celebrateDigit;
   final int? celebrateRow;
   final int? celebrateCol;
@@ -51,8 +41,6 @@ class BoardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = Theme.of(context).extension<AppPalette>()!;
-    // Highlight digit: caller-provided takes priority (persists through
-    // empty-cell taps). Fall back to the value of the selected cell.
     final selectedDigit = highlightedDigit ??
         (selected == null ? 0 : board.at(selected!.row, selected!.col).value);
     final selBox = selected == null

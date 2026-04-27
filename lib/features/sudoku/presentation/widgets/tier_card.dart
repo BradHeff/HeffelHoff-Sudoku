@@ -6,13 +6,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/difficulty.dart';
 
-/// Visual styling per tier — escalates from a calm cyan card (Easy) to
-/// a gold/violet glowing animated frame with particle aura (Evil) so
-/// the difficulty ladder *feels* like it's getting more elite.
-///
-/// Static config (icon, label, gradient stops) is paired with an
-/// `intensity` 0..4 that drives runtime animation hooks (icon pulse,
-/// border hue rotation, particle aura, shimmer sweep).
 class _TierStyle {
   const _TierStyle({
     required this.rankLabel,
@@ -21,18 +14,11 @@ class _TierStyle {
     required this.intensity,
   });
 
-  /// e.g. "BEGINNER", "NOVICE", "ADEPT", "MASTER", "ELITE"
   final String rankLabel;
   final IconData icon;
-
-  /// Border / icon-glow gradient. 2 colours — start + end.
   final List<Color> accent;
-
-  /// 0 = static card, 4 = full glow + particle aura + shimmer.
   final int intensity;
 
-  /// Minimum card height — also the relative weight when distributing
-  /// extra vertical space across cards on tall screens.
   int get minHeight => 78 + intensity * 4;
 
   static const Map<Difficulty, _TierStyle> values = {
@@ -69,12 +55,7 @@ class _TierStyle {
   };
 }
 
-/// A single difficulty tile. Layered architecture:
-///   Layer 0 — base card surface
-///   Layer 1 — animated gradient border (intensity ≥ 2)
-///   Layer 2 — particle aura overlay (intensity ≥ 3)
-///   Layer 3 — content (icon + label block + chevron)
-///   Layer 4 — shimmer sweep (intensity = 4)
+/// Difficulty tier card with progressive decoration intensity 0–4.
 class TierCard extends StatefulWidget {
   const TierCard({
     super.key,
@@ -85,14 +66,8 @@ class TierCard extends StatefulWidget {
 
   final Difficulty tier;
   final VoidCallback onTap;
-
-  /// Optional explicit height. When null falls back to the per-tier
-  /// minHeight. Pass a value when laying out in a LayoutBuilder that
-  /// distributes free vertical space across multiple cards.
   final double? height;
 
-  /// Per-tier minimum height (used as flex weight when distributing
-  /// remaining space across the difficulty list).
   static int minHeightFor(Difficulty tier) =>
       _TierStyle.values[tier]!.minHeight;
 
@@ -137,7 +112,6 @@ class _TierCardState extends State<TierCard> with SingleTickerProviderStateMixin
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            // Layer 1: animated gradient border (intensity ≥ 2).
             if (style.intensity >= 2)
               Positioned.fill(
                 child: AnimatedBuilder(
@@ -152,7 +126,6 @@ class _TierCardState extends State<TierCard> with SingleTickerProviderStateMixin
                 ),
               ),
 
-            // Layer 0 + 3 (base card + content)
             Padding(
               padding: const EdgeInsets.all(2),
               child: Container(
@@ -180,7 +153,6 @@ class _TierCardState extends State<TierCard> with SingleTickerProviderStateMixin
                 child: Stack(
                   clipBehavior: Clip.hardEdge,
                   children: [
-                    // Layer 2: particle aura
                     if (style.intensity >= 3)
                       Positioned.fill(
                         child: AnimatedBuilder(
@@ -195,7 +167,6 @@ class _TierCardState extends State<TierCard> with SingleTickerProviderStateMixin
                         ),
                       ),
 
-                    // Layer 4: shimmer sweep (Evil only)
                     if (style.intensity >= 4)
                       Positioned.fill(
                         child: const _ShimmerSweep(),
@@ -292,7 +263,6 @@ class _TierIcon extends StatelessWidget {
       ),
     );
 
-    // Pulse on intensity ≥ 1.
     if (style.intensity >= 1) {
       icon = icon
           .animate(onPlay: (c) => c.repeat(reverse: true))
@@ -303,7 +273,6 @@ class _TierIcon extends StatelessWidget {
             curve: Curves.easeInOut,
           );
     }
-    // Decorative orbiting dot for Master+ (intensity ≥ 3).
     if (style.intensity >= 3) {
       icon = SizedBox(
         width: 54,
@@ -334,7 +303,6 @@ class _TierIcon extends StatelessWidget {
         ),
       );
     }
-    // Suppress unused field hint; gold glow could be intensified here.
     if (palette.goldFrame.isEmpty) return icon;
     return icon;
   }
@@ -368,7 +336,6 @@ class _RankBadge extends StatelessWidget {
       ),
     );
     if (style.intensity >= 4) {
-      // Final badge subtly throbs.
       return pill
           .animate(onPlay: (c) => c.repeat(reverse: true))
           .scaleXY(end: 1.06, duration: 900.ms, curve: Curves.easeInOut);
@@ -377,8 +344,6 @@ class _RankBadge extends StatelessWidget {
   }
 }
 
-/// Animated gradient border. Repaints with a hue-rotated gradient angle
-/// using `t` ∈ [0, 1) as the rotation phase.
 class _GradientBorderPainter extends CustomPainter {
   _GradientBorderPainter({
     required this.colors,
@@ -421,7 +386,6 @@ class _GradientBorderPainter extends CustomPainter {
       old.t != t || old.intensity != intensity;
 }
 
-/// Floating particle dots that drift inside the card. Pure decoration.
 class _ParticleAuraPainter extends CustomPainter {
   _ParticleAuraPainter({
     required this.colors,
@@ -436,13 +400,11 @@ class _ParticleAuraPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     for (var i = 0; i < count; i++) {
-      // Each particle has a stable per-i phase; they orbit elliptically.
       final phase = (i / count + t) * 2 * math.pi;
       final cx = size.width * (0.1 + 0.8 * (i / count));
       final cy = size.height / 2 + math.sin(phase) * (size.height * 0.25);
       final radius = 2.0 + (math.sin(phase * 1.7) + 1) * 1.2;
       final color = colors[i % colors.length].withValues(alpha: 0.55);
-      // Halo
       canvas.drawCircle(
         Offset(cx, cy),
         radius * 2.2,
@@ -450,7 +412,6 @@ class _ParticleAuraPainter extends CustomPainter {
           ..color = color.withValues(alpha: 0.22)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
       );
-      // Core
       canvas.drawCircle(Offset(cx, cy), radius, Paint()..color = color);
     }
   }
@@ -464,7 +425,6 @@ class _ShimmerSweep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Diagonal white sheen sweeps L→R, then pauses.
     return IgnorePointer(
       child: Container(color: Colors.transparent)
           .animate(onPlay: (c) => c.repeat())

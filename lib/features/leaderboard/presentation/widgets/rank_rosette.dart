@@ -2,10 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-/// A scalloped circular badge stamped with a rank number — visual
-/// echo of the Sudoku Master inspiration list. The rosette has 12
-/// petals, a primary fill colour, a darker stroke, and a centred
-/// rank number.
+/// 12-petal scalloped rank badge with the rank number stamped centred.
 class RankRosette extends StatelessWidget {
   const RankRosette({
     super.key,
@@ -20,9 +17,6 @@ class RankRosette extends StatelessWidget {
   final Color color;
   final Color? borderColor;
   final double size;
-
-  /// True when this is the current user's rosette — adds a soft
-  /// outer glow + slightly thicker stroke.
   final bool highlight;
 
   @override
@@ -53,11 +47,9 @@ class RankRosette extends StatelessWidget {
     );
   }
 
-  /// Pick a foreground that contrasts against the rosette fill.
   Color _foregroundFor(Color fill, Color fallback, bool highlight) {
     if (highlight) return Colors.white;
-    // ITU-R BT.601 luma — light fills (gold/silver/bronze) get dark text.
-    final luma = (0.299 * fill.r + 0.587 * fill.g + 0.114 * fill.b);
+    final luma = 0.299 * fill.r + 0.587 * fill.g + 0.114 * fill.b;
     return luma > 0.6 ? const Color(0xFF21140A) : fallback;
   }
 }
@@ -80,7 +72,6 @@ class _RosettePainter extends CustomPainter {
     final centre = Offset(cx, cy);
     final r = math.min(cx, cy) - 1;
 
-    // Soft outer glow on the highlighted rosette (current user).
     if (highlight) {
       canvas.drawCircle(
         centre,
@@ -91,8 +82,6 @@ class _RosettePainter extends CustomPainter {
       );
     }
 
-    // Build the scalloped petal path. 12 petals — alternating between
-    // outer R (petal tip) and an inner R (notch between petals).
     const petals = 12;
     final outerR = r;
     final innerR = r * 0.86;
@@ -109,7 +98,6 @@ class _RosettePainter extends CustomPainter {
     }
     path.close();
 
-    // Fill
     canvas.drawPath(
       path,
       Paint()
@@ -120,7 +108,6 @@ class _RosettePainter extends CustomPainter {
         ).createShader(Rect.fromCircle(center: centre, radius: r)),
     );
 
-    // Border
     canvas.drawPath(
       path,
       Paint()

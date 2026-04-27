@@ -6,24 +6,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../sudoku/domain/difficulty.dart';
 import '../domain/leaderboard_entry.dart';
 
-/// Reads `public.leaderboard_entries` joined with `public.profiles`,
-/// ordered by best IQ (desc) then best time (asc).
-///
-/// Realtime: subscribes to `leaderboard_entries` changes filtered by
-/// `difficulty` so the list reorders live as users post new bests.
 class LeaderboardRepository {
   LeaderboardRepository(this._client);
 
   final SupabaseClient _client;
   static const int defaultLimit = 100;
 
-  /// One-shot fetch.
   Future<List<LeaderboardEntry>> fetchTop({
     required Difficulty difficulty,
     int limit = defaultLimit,
   }) async {
-    // Tie-break: when two users have the same best_iq, the one who
-    // *achieved that IQ first* ranks higher. (achieved_at ascending).
     final rows = await _client
         .from('leaderboard_entries')
         .select('user_id, difficulty, best_iq, best_time_seconds, achieved_at, '
@@ -35,9 +27,7 @@ class LeaderboardRepository {
     return rows.map<LeaderboardEntry>(LeaderboardEntry.fromRow).toList();
   }
 
-  /// Streaming subscription. Re-fetches the whole top-100 on any change
-  /// to a `leaderboard_entries` row matching the tier. Simpler and more
-  /// reliable than diffing — at 100 rows it's a sub-millisecond query.
+  /// Realtime stream — re-fetches the top-N on any leaderboard change.
   Stream<List<LeaderboardEntry>> watchTop({
     required Difficulty difficulty,
     int limit = defaultLimit,
@@ -81,7 +71,6 @@ final leaderboardRepositoryProvider = Provider<LeaderboardRepository>((ref) {
   return LeaderboardRepository(Supabase.instance.client);
 });
 
-/// Realtime-keyed family of leaderboard streams, one per difficulty.
 final leaderboardStreamProvider = StreamProvider.autoDispose
     .family<List<LeaderboardEntry>, Difficulty>((ref, difficulty) {
   final repo = ref.watch(leaderboardRepositoryProvider);

@@ -1,5 +1,3 @@
-/// The five difficulty tiers, ordered easy → evil. Each tier has its
-/// own leaderboard and IQ scoring constants.
 enum Difficulty {
   easy(id: 'easy', label: 'Easy', baseIQ: 100, targetTimeSeconds: 420, minClues: 40, maxClues: 45, timeBonusCap: 12, timePenaltyCap: 10, floorTimeSeconds: 30),
   medium(id: 'medium', label: 'Medium', baseIQ: 115, targetTimeSeconds: 720, minClues: 32, maxClues: 36, timeBonusCap: 15, timePenaltyCap: 12, floorTimeSeconds: 60),
@@ -27,7 +25,5 @@ enum Difficulty {
   final int maxClues;
   final int timeBonusCap;
   final int timePenaltyCap;
-
-  /// Server-side anti-cheat lower bound: solving below this is implausible.
   final int floorTimeSeconds;
 }

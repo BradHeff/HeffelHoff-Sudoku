@@ -1,20 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// Custom theme extension for game-specific tokens that don't map cleanly
-/// to a Material 3 ColorScheme role: podium frames, life heart, IQ-genius
-/// gradient, the persistent particle palette, and — most importantly —
-/// hand-tuned Sudoku cell-state surface + foreground colors.
-///
-/// We deliberately bypass `ColorScheme.surfaceContainerLow/High/...` for
-/// cell states because the auto-generated tonal palette is too subtle on
-/// dark themes — selected/peer/same-digit shades all collapse into
-/// near-identical greys. The tokens below are picked manually for clear
-/// visual hierarchy:
-///
-///   wrong > selected  >  sameDigit  >  peer  >  surface
-///
-/// Givens and empty cells share the same surface (distinguished only by
-/// font weight) to avoid a "checkerboard" speckle effect on the board.
+/// Brand-specific tokens not covered by ColorScheme: podium frames,
+/// life heart, IQ-genius gradient, particle palette, hand-tuned cell
+/// state colours.
 class AppPalette extends ThemeExtension<AppPalette> {
   const AppPalette({
     required this.goldFrame,
@@ -45,55 +33,19 @@ class AppPalette extends ThemeExtension<AppPalette> {
   final Color lifeRedFaded;
   final List<Color> iqGenius;
   final List<Color> particleTints;
-
-  /// Default board cell background (used for both empty and given cells).
   final Color cellSurface;
-
-  /// Wash applied to all cells in the same row, column, or 3×3 box as
-  /// the selected cell. Subtle but visibly different from [cellSurface].
   final Color cellPeer;
-
-  /// Background for cells whose value matches the selected cell's value.
-  /// Stronger than [cellPeer], a different hue from [cellSelected] so
-  /// the two states are unambiguously distinct.
   final Color cellSameDigit;
-
-  /// The currently-focused cell. Loudest non-error state.
   final Color cellSelected;
-
-  /// Digit colour on a [cellSelected] background.
   final Color cellSelectedFg;
-
-  /// Wrong-entry cell.
   final Color cellWrong;
   final Color cellWrongFg;
-
-  /// Original puzzle clues (immutable, bold).
   final Color cellGivenDigit;
-
-  /// Player-placed correct digits.
   final Color cellUserDigit;
-
-  /// Digit colour when the cell is part of the same-digit highlight.
   final Color cellSameDigitFg;
-
-  /// Thin lines between cells.
   final Color boardLine;
-
-  /// Thick lines between 3×3 boxes.
   final Color boardLineThick;
 
-  // ---------------------------------------------------------------------
-  // Brand palette extracted from assets/branding/playstore_icon.png:
-  //   #01072D deep navy   — base background
-  //   #030D4E dark navy   — surface
-  //   #05166F mid navy    — elevated surface
-  //   #1948E0 electric    — secondary accent (peer wash, info)
-  //   #36A8FA cyan glow   — PRIMARY brand accent (selected, headlines)
-  //   #A35DF4 violet      — tertiary accent (HH letterform, achievements)
-  //   #E4EDFC pale ice    — foreground text on dark surfaces
-  // See docs/BRANDING.md for the canonical guide.
-  // ---------------------------------------------------------------------
   static const dark = AppPalette(
     goldFrame: [Color(0xFFFFD700), Color(0xFFFFA500)],
     silverFrame: [Color(0xFFC0C0C0), Color(0xFFE5E4E2)],

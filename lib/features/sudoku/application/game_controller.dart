@@ -12,9 +12,6 @@ import '../domain/game_state.dart';
 import '../domain/puzzle.dart';
 import 'iq_calculator.dart';
 
-/// State notifier driving an active Sudoku game. Owns the timer, lives,
-/// mistake counter, pencil mode, and validation against the canonical
-/// solution. Lives default to 3 (free) — Phase 6 wires Pro to bump to 5.
 class GameController extends StateNotifier<GameState> {
   GameController({
     required Difficulty difficulty,
@@ -35,15 +32,11 @@ class GameController extends StateNotifier<GameState> {
   Timer? _ticker;
   Timer? _digitCelebrationTimer;
 
-  /// How long the digit-complete celebration stays on screen before
-  /// being cleared.
   static const Duration kDigitCelebrationDuration = Duration(milliseconds: 1500);
 
   Future<void> _start({required Difficulty difficulty, int? seed}) async {
     final s = seed ?? DateTime.now().millisecondsSinceEpoch;
     try {
-      // Phase 1: run on the main isolate; Phase 1+ swap to compute() once
-      // perf testing on real devices proves it's needed.
       final puzzle = await _generate(seed: s, difficulty: difficulty);
       final board = Board.fromClues(puzzle.clues);
       state = GameOngoing(
@@ -82,12 +75,9 @@ class GameController extends StateNotifier<GameState> {
     });
   }
 
-  /// Tap-to-select. Highlight rules per docs:
-  ///   - Tap a filled cell → highlight that digit.
-  ///   - Tap an empty cell while a highlight is active → keep it
-  ///     (user is *intending* to enter that digit there).
-  ///   - Tap a *second* empty cell without entering anything between
-  ///     them → clear the highlight (lost intent).
+  /// Tap-to-select. Highlight survives a single empty-cell tap that
+  /// follows a filled-cell tap; a second consecutive empty-cell tap
+  /// clears it.
   void selectCell(int row, int col) {
     final s = state;
     if (s is! GameOngoing) return;
@@ -100,13 +90,10 @@ class GameController extends StateNotifier<GameState> {
     int? nextHighlight;
     var clearHighlight = false;
     if (newCell.value != 0 && !newCell.isWrong) {
-      // Filled cell tapped — highlight that digit.
       nextHighlight = newCell.value;
     } else if (prevWasFilled && s.highlightedDigit != null) {
-      // First empty-cell tap after a filled-cell tap — keep the highlight.
       nextHighlight = s.highlightedDigit;
     } else {
-      // Empty → empty (or no prior selection) — clear.
       clearHighlight = true;
     }
 
@@ -129,8 +116,7 @@ class GameController extends StateNotifier<GameState> {
     state = s.copyWith(paused: paused);
   }
 
-  /// User taps a digit on the number pad. Returns true if the entry was
-  /// accepted (correct or pencil), false if it was a wrong placement.
+  /// Place [digit] at the selected cell. Returns true if accepted.
   bool enterDigit(int digit) {
     final s = state;
     if (s is! GameOngoing) return false;
@@ -139,14 +125,12 @@ class GameController extends StateNotifier<GameState> {
     final cell = s.board.at(sel.row, sel.col);
     if (cell.isGiven) return false;
 
-    // Pencil mode: toggle the candidate bit, no validation, no life loss.
     if (s.pencilMode && cell.isEmpty) {
       final mask = cell.pencilMarks ^ (1 << (digit - 1));
       state = s.copyWith(board: s.board.withCell(cell.copyWith(pencilMarks: mask)));
       return true;
     }
 
-    // Same digit re-tapped on a filled cell → erase.
     if (cell.value == digit) {
       state = s.copyWith(
         board: s.board.withCell(cell.copyWith(value: 0, pencilMarks: 0, isWrong: false)),
@@ -157,8 +141,6 @@ class GameController extends StateNotifier<GameState> {
     final correct = s.puzzle.isCorrect(row: sel.row, col: sel.col, value: digit);
     if (correct) {
       final next = s.board.withCell(cell.copyWith(value: digit, pencilMarks: 0, isWrong: false));
-      // Successful placement → make the just-placed digit the new
-      // highlight so chain entries flow naturally.
       _sound.play(SoundEvent.placeCorrect);
       _afterPlacement(
         s.copyWith(highlightedDigit: digit),
@@ -170,7 +152,6 @@ class GameController extends StateNotifier<GameState> {
       return true;
     }
 
-    // Wrong: place visibly, mark wrong, decrement lives.
     _sound.play(SoundEvent.placeWrong);
     final wrongCell = cell.copyWith(value: digit, pencilMarks: 0, isWrong: true);
     final lives = s.lives - 1;
@@ -178,7 +159,6 @@ class GameController extends StateNotifier<GameState> {
     final boardWithWrong = s.board.withCell(wrongCell);
     state = s.copyWith(board: boardWithWrong, lives: lives, mistakes: mistakes);
 
-    // Auto-clear the wrong entry after a brief delay so the player can retry.
     Future<void>.delayed(const Duration(milliseconds: 1200), () {
       final cur = state;
       if (cur is GameOngoing) {
@@ -214,14 +194,8 @@ class GameController extends StateNotifier<GameState> {
     );
   }
 
-  /// Reveal the correct digit at the selected cell. Counts as a hint
-  /// and incurs the hint IQ penalty.
-  ///
-  /// If no cell is currently selected, OR the selected cell is already
-  /// filled correctly / is a given clue, the hint walks the board left-
-  /// to-right, top-to-bottom and uses the first empty (or wrong-flagged)
-  /// cell. This matches mainstream Sudoku UX — Hint always *does
-  /// something*.
+  /// Reveal the correct digit. If no usable cell is selected, walks
+  /// the board and uses the first empty / wrong-flagged cell.
   void useHint() {
     final s = state;
     if (s is! GameOngoing) return;
@@ -230,8 +204,6 @@ class GameController extends StateNotifier<GameState> {
 
     bool needsRetarget(({int row, int col}) target) {
       final c = s.board.at(target.row, target.col);
-      // Need a new target if the current one is given OR already
-      // filled with the correct value (no work to do).
       return c.isGiven ||
           (c.value != 0 && !c.isWrong && c.value == s.puzzle.digitAt(target.row, target.col));
     }
@@ -249,7 +221,7 @@ class GameController extends StateNotifier<GameState> {
           break;
         }
       }
-      if (sel == null) return; // Nothing to reveal.
+      if (sel == null) return;
     }
 
     final cell = s.board.at(sel.row, sel.col);
@@ -266,11 +238,8 @@ class GameController extends StateNotifier<GameState> {
     );
   }
 
-  /// Called after a *correct* placement on [next]. Detects 8→9 transitions
-  /// for the placed digit, the row, the column, and the 3×3 box that the
-  /// placement falls in, and fires a celebration covering whichever
-  /// structures completed (any combination, including all four — a quad
-  /// combo is rare but possible).
+  /// Detects 8→9 transitions for digit/row/col/box and fires the
+  /// matching celebrations. Transitions to GameWon when the board fills.
   void _afterPlacement(
     GameOngoing s,
     Board next, {
@@ -292,9 +261,6 @@ class GameController extends StateNotifier<GameState> {
         wasUnderTarget ? SoundEvent.puzzleCompleteGenius : SoundEvent.puzzleComplete,
       );
 
-      // Phase 2/3: persist the attempt to Supabase so it shows up on
-      // the leaderboard. No-op if no user is signed in. Phase 5 swaps
-      // this for an Edge Function call with server-side IQ recompute.
       unawaited(_attempts.submitWin(
         puzzle: s.puzzle,
         startedAt: s.startedAt,
@@ -317,7 +283,6 @@ class GameController extends StateNotifier<GameState> {
       return;
     }
 
-    // Detect 8 → 9 transitions for the four structure types.
     final placedBox = (placedRow ~/ 3) * 3 + (placedCol ~/ 3);
 
     final completedDigit = (s.board.countDigit(placedDigit) != 9 &&
@@ -343,9 +308,6 @@ class GameController extends StateNotifier<GameState> {
       _digitCelebrationTimer?.cancel();
       final at = DateTime.now();
 
-      // Sound: pick the most "exciting" event that fired. Digit-complete
-      // (rarest, highest impact) wins over structure-complete; combos
-      // upgrade to a louder cue.
       final structureCount = [completedRow, completedCol, completedBox]
           .where((e) => e != null)
           .length;
@@ -391,8 +353,6 @@ class GameController extends StateNotifier<GameState> {
   }
 }
 
-/// Family provider — keyed by difficulty + optional seed. Pass a seed
-/// for testability; pass null to use the wall clock.
 final gameControllerProvider = StateNotifierProvider.autoDispose
     .family<GameController, GameState, ({Difficulty difficulty, int? seed})>(
   (ref, args) => GameController(

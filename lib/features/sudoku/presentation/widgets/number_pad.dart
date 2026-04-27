@@ -5,10 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../domain/board.dart';
 
-/// Number pad 1–9 with a remaining-count subscript under each digit.
-/// Tap selects + places that digit at the currently-selected cell.
-/// A digit with `remaining == 0` (all 9 already on the board) is shown
-/// with a gold checkmark badge instead of the count.
+/// Number pad 1–9 with remaining-count subscript per digit.
 class NumberPad extends StatelessWidget {
   const NumberPad({
     super.key,
@@ -23,8 +20,6 @@ class NumberPad extends StatelessWidget {
   final void Function(int digit) onDigit;
   final bool disabled;
 
-  /// When set, the matching digit button plays a one-shot glow + scale
-  /// pulse keyed on [celebrateKey].
   final int? celebrateDigit;
   final Object? celebrateKey;
 
@@ -70,8 +65,6 @@ class _DigitButton extends StatelessWidget {
     final exhausted = remaining <= 0;
     final disabled = onTap == null || exhausted;
 
-    // When exhausted, render the digit in gold (achievement style)
-    // rather than greyed-out. The checkmark below makes it obvious.
     final Color color;
     if (exhausted) {
       color = palette.goldFrame.first;
