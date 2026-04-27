@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../auth/data/auth_repository.dart';
+import '../../auth/data/profile_repository.dart';
 import '../../auth/presentation/account_sheet.dart';
 import '../domain/difficulty.dart';
 import 'widgets/tier_card.dart';
@@ -170,8 +171,8 @@ class DifficultySelectScreen extends ConsumerWidget {
 
 
 /// Avatar button on the home screen header. Shows the first letter of
-/// the signed-in user's email (or a person icon if anonymous / not
-/// signed in) and opens the [showAccountSheet] modal on tap.
+/// the signed-in user's *username* (never the email) — keeps the email
+/// private. Falls back to a person icon for guest / signed-out.
 class _AccountAvatarButton extends ConsumerWidget {
   const _AccountAvatarButton();
 
@@ -181,9 +182,10 @@ class _AccountAvatarButton extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
 
     final user = auth.asData?.value;
-    final email = user?.email ?? '';
     final isAnonymous = user?.isAnonymous == true;
-    final hasInitial = !isAnonymous && email.isNotEmpty;
+    final profile = user == null ? null : ref.watch(currentProfileProvider).asData?.value;
+    final username = profile?.displayName ?? '';
+    final hasInitial = !isAnonymous && username.isNotEmpty;
 
     return Material(
       color: scheme.surfaceContainerHigh,
@@ -206,7 +208,7 @@ class _AccountAvatarButton extends ConsumerWidget {
           ),
           child: hasInitial
               ? Text(
-                  email[0].toUpperCase(),
+                  username[0].toUpperCase(),
                   style: TextStyle(
                     color: scheme.primary,
                     fontWeight: FontWeight.w800,

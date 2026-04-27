@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../data/auth_repository.dart';
+import '../data/profile_repository.dart';
 
 /// Modal bottom sheet that handles sign-in / sign-up / guest / sign-out.
 /// Renders different content based on whether the user is currently
@@ -240,60 +241,77 @@ class _SignedInView extends ConsumerWidget {
     final palette = Theme.of(context).extension<AppPalette>()!;
     final text = Theme.of(context).textTheme;
     final isAnonymous = user.isAnonymous == true;
-    final email = user.email ?? '';
-    final initial = (email.isNotEmpty ? email[0] : '?').toUpperCase();
+    final profileAsync = ref.watch(currentProfileProvider);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Center(
-          child: Container(
-            width: 72,
+        // Avatar uses the username's first letter (or person icon for guest).
+        // Email is intentionally never rendered.
+        profileAsync.when(
+          loading: () => const SizedBox(
             height: 72,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: scheme.primaryContainer,
-              boxShadow: [
-                BoxShadow(
-                  color: scheme.primary.withValues(alpha: 0.4),
-                  blurRadius: 18,
-                ),
-              ],
-            ),
-            alignment: Alignment.center,
-            child: isAnonymous
-                ? Icon(Icons.person, color: scheme.onPrimaryContainer, size: 32)
-                : Text(
-                    initial,
-                    style: text.headlineMedium?.copyWith(
-                      color: scheme.onPrimaryContainer,
-                      fontWeight: FontWeight.w800,
-                    ),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (_, __) => const SizedBox(height: 72),
+          data: (profile) => Center(
+            child: Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: scheme.primaryContainer,
+                boxShadow: [
+                  BoxShadow(
+                    color: scheme.primary.withValues(alpha: 0.4),
+                    blurRadius: 18,
                   ),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: isAnonymous
+                  ? Icon(Icons.person, color: scheme.onPrimaryContainer, size: 32)
+                  : Text(
+                      _initialFor(profile?.displayName),
+                      style: text.headlineMedium?.copyWith(
+                        color: scheme.onPrimaryContainer,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+            ),
           ),
         ),
         const SizedBox(height: 12),
-        Text(
-          isAnonymous ? 'Playing as guest' : email,
-          style: text.titleLarge,
-          textAlign: TextAlign.center,
+        // Username editor.
+        profileAsync.when(
+          loading: () => const SizedBox.shrink(),
+          error: (e, _) => Text(
+            'Could not load profile: $e',
+            style: text.bodySmall?.copyWith(color: scheme.error),
+            textAlign: TextAlign.center,
+          ),
+          data: (profile) => _UsernameEditor(
+            user: user,
+            profile: profile,
+          ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         Text(
           isAnonymous
               ? 'Your scores are local. Sign up to save them across devices.'
-              : 'Signed in.',
-          style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+              : 'Your username is what others see on the leaderboard. '
+                  'Your email stays private.',
+          style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
         if (isAnonymous)
           FilledButton.icon(
-            onPressed: () {
-              Navigator.of(context).pop();
-              // Re-open in sign-up flow. Caller handles re-show.
-              showAccountSheet(context);
+            onPressed: () async {
+              await ref.read(authRepositoryProvider).signOut();
+              if (context.mounted) Navigator.of(context).pop();
+              if (context.mounted) showAccountSheet(context);
             },
             icon: const Icon(Icons.upgrade),
             label: const Text('Upgrade to a real account'),
@@ -311,6 +329,159 @@ class _SignedInView extends ConsumerWidget {
             foregroundColor: palette.lifeRed,
             side: BorderSide(color: palette.lifeRed.withValues(alpha: 0.4)),
           ),
+        ),
+      ],
+    );
+  }
+
+  static String _initialFor(String? displayName) {
+    if (displayName == null || displayName.isEmpty) return '?';
+    return displayName.trim()[0].toUpperCase();
+  }
+}
+
+/// Username display + inline editor. Two states:
+///   collapsed → tap "Edit" to expand
+///   editing   → TextField + Save / Cancel
+/// When the profile is still on the auto-generated Player#### name,
+/// the row shows a "Set a username" affordance and starts in edit mode.
+class _UsernameEditor extends ConsumerStatefulWidget {
+  const _UsernameEditor({required this.user, required this.profile});
+
+  final User user;
+  final Profile? profile;
+
+  @override
+  ConsumerState<_UsernameEditor> createState() => _UsernameEditorState();
+}
+
+class _UsernameEditorState extends ConsumerState<_UsernameEditor> {
+  late final TextEditingController _controller;
+  bool _editing = false;
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final name = widget.profile?.displayName ?? '';
+    _controller = TextEditingController(text: name);
+    // Auto-edit if still on placeholder so it's obvious the user
+    // should pick a real username.
+    if (widget.profile?.isPlaceholderName ?? false) {
+      _editing = true;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final name = _controller.text.trim();
+    final err = ProfileRepository.validateUsername(name);
+    if (err != null) {
+      setState(() => _error = err);
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await ref.read(profileRepositoryProvider).updateDisplayName(
+            userId: widget.user.id,
+            name: name,
+          );
+      ref.invalidate(currentProfileProvider);
+      if (!mounted) return;
+      setState(() {
+        _editing = false;
+        _busy = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = '$e';
+        _busy = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final profile = widget.profile;
+    final placeholder = profile?.isPlaceholderName ?? false;
+
+    if (!_editing) {
+      return Column(
+        children: [
+          Text(
+            profile?.displayName ?? '—',
+            style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          TextButton.icon(
+            onPressed: () => setState(() => _editing = true),
+            icon: const Icon(Icons.edit_outlined, size: 16),
+            label: Text(placeholder ? 'Set a username' : 'Edit username'),
+            style: TextButton.styleFrom(
+              foregroundColor: placeholder ? scheme.primary : scheme.onSurfaceVariant,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: _controller,
+          maxLength: 24,
+          textInputAction: TextInputAction.done,
+          onSubmitted: _busy ? null : (_) => _save(),
+          enabled: !_busy,
+          decoration: InputDecoration(
+            labelText: 'Username',
+            hintText: 'How others will know you',
+            border: const OutlineInputBorder(),
+            counterText: '', // hide the 0/24
+            errorText: _error,
+            prefixIcon: const Icon(Icons.badge_outlined),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _busy ? null : () => setState(() => _editing = false),
+                child: const Text('Cancel'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: FilledButton(
+                onPressed: _busy ? null : _save,
+                child: _busy
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Save'),
+              ),
+            ),
+          ],
         ),
       ],
     );
