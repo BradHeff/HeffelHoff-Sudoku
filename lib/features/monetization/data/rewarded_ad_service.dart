@@ -15,7 +15,12 @@ class AdMobRewardedAdService implements RewardedAdService {
   static const _testAndroid = 'ca-app-pub-3940256099942544/5224354917';
   static const _testIos = 'ca-app-pub-3940256099942544/1712485313';
 
-  static const _prodAndroid = 'ca-app-pub-7297042648861877/7686622785';
+  /// Production ad-unit IDs are injected at build time via `--dart-define`
+  /// (`ADMOB_REWARDED_ANDROID` / `ADMOB_REWARDED_IOS`) so they're never
+  /// committed to the repo. If unset in a release build, falls back to the
+  /// test ID — better to ship test ads than crash, and the override flag
+  /// makes the misconfiguration obvious in the next dev cycle.
+  static const _prodAndroid = '';
   static const _prodIos = '';
 
   static const _overrideAndroid = String.fromEnvironment(
