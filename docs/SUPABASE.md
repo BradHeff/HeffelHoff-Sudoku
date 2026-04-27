@@ -48,12 +48,28 @@ supabase db push
 
 | Provider | Action | Required for |
 |---|---|---|
-| **Email** | Enabled by default. Optionally turn off "Confirm email" while iterating. | Email/password sign in + sign up |
+| **Email** | Enabled by default. **Turn OFF "Confirm email"** while iterating (see below). | Email/password sign in + sign up |
 | **Anonymous Sign-Ins** | Toggle ON. | "Continue as guest" button |
 | Google (Phase 3+) | Skip until you have OAuth client IDs. | Google sign-in button |
 | Apple (Phase 3+) | Skip until you have an Apple Service ID + key. | Apple sign-in button |
 
 If anonymous is OFF, the "Continue as guest" button will show an error from Supabase — that's expected until you flip the toggle.
+
+### Why disable "Confirm email"
+
+By default Supabase sends a confirmation email after sign-up and blocks login until the user clicks the link. The link points to the project's **Site URL** which defaults to `http://localhost:3000` — so on a phone the link goes to a non-existent local server and you can't confirm. Result: `Email not confirmed` blocks every login.
+
+Two ways to fix:
+
+**Quickest (dev only)** — Authentication → Providers → Email → toggle "Confirm email" to **OFF**. Sign up + sign in works immediately, no confirmation step. Re-enable for production.
+
+**Proper fix (when ready for production)** — Authentication → URL Configuration:
+
+- Set **Site URL** to a real URL: a custom-domain landing page, a `https://heffelhoff-sudoku.example/auth/callback` static page, OR an Android/iOS deep-link scheme (e.g. `heffelhoff://auth/callback`) that the app handles via a deep-link plugin.
+- Add the same URL to **Redirect URLs**.
+- Customise the email template at Authentication → Email Templates → Confirm signup if you want to brand it.
+
+Until either of those is done, expect the "Email not confirmed" error after sign-up. The AccountSheet surfaces Supabase's exact message — that's the signal to flip the toggle off (or finish the deep-link setup).
 
 ---
 
