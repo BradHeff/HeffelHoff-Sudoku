@@ -26,6 +26,16 @@
 		<string>$(FLUTTER_BUILD_NUMBER)</string>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
+		<!-- Export compliance — declares the app uses no encryption beyond
+		     what Apple's OS provides (HTTPS via URLSession, Keychain via
+		     flutter_secure_storage, StoreKit). Picking "None of the
+		     algorithms mentioned above" in App Store Connect produces the
+		     same result; this key skips the prompt on every future
+		     TestFlight upload. If you ever add a third-party crypto
+		     library or do app-level encryption (custom AES, etc.), set
+		     this to <true/> and answer the App Store Connect questions. -->
+		<key>ITSAppUsesNonExemptEncryption</key>
+		<false/>
 		<!-- AdMob iOS App ID. REQUIRED — without it, google_mobile_ads
 		     crashes the app at launch. Currently the Google sample iOS
 		     test ID. Replace with the real ID once registered in AdMob
