@@ -23,6 +23,18 @@ val admobAppIdAndroid: String = run {
         ?: "ca-app-pub-3940256099942544~3347511713"
 }
 
+// Upload-key signing config — reads from gitignored `android/key.properties`.
+// Falls back to debug signing only if the file isn't present (e.g. fresh
+// clone with no upload key generated yet).
+val keystoreProperties: Properties? = run {
+    val keystoreFile = rootProject.file("key.properties")
+    if (keystoreFile.exists()) {
+        Properties().apply { keystoreFile.inputStream().use { load(it) } }
+    } else {
+        null
+    }
+}
+
 android {
     namespace = "com.heffelhoff.heffelhoffsudoku"
     compileSdk = flutter.compileSdkVersion
@@ -50,11 +62,21 @@ android {
         manifestPlaceholders["admobAppId"] = admobAppIdAndroid
     }
 
+    signingConfigs {
+        keystoreProperties?.let { props ->
+            create("release") {
+                storeFile = file(props.getProperty("storeFile"))
+                storePassword = props.getProperty("storePassword")
+                keyAlias = props.getProperty("keyAlias")
+                keyPassword = props.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release")
+                ?: signingConfigs.getByName("debug")
         }
     }
 }

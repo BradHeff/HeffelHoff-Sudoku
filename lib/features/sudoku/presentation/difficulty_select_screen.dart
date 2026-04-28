@@ -8,6 +8,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../auth/data/profile_repository.dart';
 import '../../auth/presentation/account_sheet.dart';
+import '../../profile/presentation/widgets/progression_header.dart';
 import '../domain/difficulty.dart';
 import 'widgets/tier_card.dart';
 
@@ -98,6 +99,7 @@ class DifficultySelectScreen extends ConsumerWidget {
                     ),
               ),
               const SizedBox(height: 14),
+              const ProgressionHeader(),
               Expanded(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
