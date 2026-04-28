@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/audio/sound_service.dart';
+import '../../profile/data/best_iq_repository.dart';
 import '../data/attempts_repository.dart';
 import '../data/backtracking_generator.dart';
 import '../domain/board.dart';
@@ -11,17 +12,20 @@ import '../domain/difficulty.dart';
 import '../domain/game_state.dart';
 import '../domain/puzzle.dart';
 import 'iq_calculator.dart';
+import 'sync_status.dart';
 
 class GameController extends StateNotifier<GameState> {
   GameController({
     required Difficulty difficulty,
     required SoundService sound,
     required AttemptsRepository attempts,
+    required Ref ref,
     int? seed,
     int maxLives = 3,
   })  : _maxLives = maxLives,
         _sound = sound,
         _attempts = attempts,
+        _ref = ref,
         super(GameLoading(difficulty: difficulty)) {
     _start(difficulty: difficulty, seed: seed);
   }
@@ -29,12 +33,19 @@ class GameController extends StateNotifier<GameState> {
   final int _maxLives;
   final SoundService _sound;
   final AttemptsRepository _attempts;
+  final Ref _ref;
+  ({Puzzle puzzle, DateTime startedAt, int timeSeconds, int mistakes,
+    int hintsUsed, int livesUsed, int iqScore})? _lastWinPayload;
   Timer? _ticker;
   Timer? _digitCelebrationTimer;
 
   static const Duration kDigitCelebrationDuration = Duration(milliseconds: 1500);
 
   Future<void> _start({required Difficulty difficulty, int? seed}) async {
+    // Reset the sync badge so a new puzzle doesn't inherit "Result saved"
+    // from the previous round's post-game screen.
+    _ref.read(lastSubmitStatusProvider.notifier).state = SyncStatus.idle;
+    _lastWinPayload = null;
     final s = seed ?? DateTime.now().millisecondsSinceEpoch;
     try {
       final puzzle = await _generate(seed: s, difficulty: difficulty);
@@ -304,7 +315,7 @@ class GameController extends StateNotifier<GameState> {
         wasUnderTarget ? SoundEvent.puzzleCompleteGenius : SoundEvent.puzzleComplete,
       );
 
-      unawaited(_attempts.submitWin(
+      _lastWinPayload = (
         puzzle: s.puzzle,
         startedAt: s.startedAt,
         timeSeconds: time,
@@ -312,7 +323,8 @@ class GameController extends StateNotifier<GameState> {
         hintsUsed: s.hintsUsed,
         livesUsed: s.maxLives - s.lives,
         iqScore: iq.iqScore,
-      ));
+      );
+      unawaited(_runSubmitWin());
 
       state = GameWon(
         puzzle: s.puzzle,
@@ -388,6 +400,36 @@ class GameController extends StateNotifier<GameState> {
     _ticker = null;
   }
 
+  /// Submits the most recent win and updates [lastSubmitStatusProvider]
+  /// so the post-game screen can show a syncing → synced/failed badge.
+  Future<void> _runSubmitWin() async {
+    final payload = _lastWinPayload;
+    if (payload == null) return;
+    _ref.read(lastSubmitStatusProvider.notifier).state = SyncStatus.syncing;
+    final ok = await _attempts.submitWin(
+      puzzle: payload.puzzle,
+      startedAt: payload.startedAt,
+      timeSeconds: payload.timeSeconds,
+      mistakes: payload.mistakes,
+      hintsUsed: payload.hintsUsed,
+      livesUsed: payload.livesUsed,
+      iqScore: payload.iqScore,
+    );
+    if (!mounted) return;
+    _ref.read(lastSubmitStatusProvider.notifier).state =
+        ok ? SyncStatus.synced : SyncStatus.failed;
+    if (ok) {
+      // The leaderboard trigger has just upserted a (potentially new)
+      // best — refresh the home-screen progression header so it shows
+      // the new IQ next time the player navigates back.
+      _ref.invalidate(userBestIqProvider);
+    }
+  }
+
+  /// Re-runs the submit for the most recent win — surfaced as the "Retry"
+  /// action on the post-game sync badge.
+  Future<void> retrySubmitWin() => _runSubmitWin();
+
   @override
   void dispose() {
     _stopTicker();
@@ -403,5 +445,6 @@ final gameControllerProvider = StateNotifierProvider.autoDispose
     seed: args.seed,
     sound: ref.watch(soundServiceProvider),
     attempts: ref.watch(attemptsRepositoryProvider),
+    ref: ref,
   ),
 );

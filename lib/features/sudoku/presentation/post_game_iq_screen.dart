@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:confetti/confetti.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../application/iq_calculator.dart';
+import '../application/sync_status.dart';
 import '../domain/puzzle.dart';
 
 /// Post-game IQ screen with Einstein bar + confetti, plus the
 /// enhanced "GENIUS" celebration when [wasUnderTarget] is true.
-class PostGameIqScreen extends StatefulWidget {
+class PostGameIqScreen extends ConsumerStatefulWidget {
   const PostGameIqScreen({
     super.key,
     required this.puzzle,
@@ -22,6 +24,7 @@ class PostGameIqScreen extends StatefulWidget {
     required this.onPlayAgain,
     required this.onBackToStart,
     this.onNext,
+    this.onRetrySubmit,
   });
 
   final Puzzle puzzle;
@@ -36,11 +39,15 @@ class PostGameIqScreen extends StatefulWidget {
 
   final VoidCallback? onNext;
 
+  /// Re-runs the submit when the player taps the "Retry" action on the
+  /// sync badge. Provided by the game screen, which holds the controller.
+  final VoidCallback? onRetrySubmit;
+
   @override
-  State<PostGameIqScreen> createState() => _PostGameIqScreenState();
+  ConsumerState<PostGameIqScreen> createState() => _PostGameIqScreenState();
 }
 
-class _PostGameIqScreenState extends State<PostGameIqScreen> {
+class _PostGameIqScreenState extends ConsumerState<PostGameIqScreen> {
   late final ConfettiController _confetti;
   ConfettiController? _geniusBurst;
 
@@ -227,6 +234,11 @@ class _PostGameIqScreenState extends State<PostGameIqScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    if (widget.won)
+                      _SyncBadge(
+                        status: ref.watch(lastSubmitStatusProvider),
+                        onRetry: widget.onRetrySubmit,
+                      ),
                     if (widget.onNext != null)
                       FilledButton.icon(
                         onPressed: widget.onNext,
@@ -383,6 +395,85 @@ class _StatTile extends StatelessWidget {
           ),
           Text(value, style: Theme.of(context).textTheme.titleMedium),
         ],
+      ),
+    );
+  }
+}
+
+/// Compact pill that surfaces the [SyncStatus] of the most recent submit.
+/// Idle state renders nothing (zero footprint when status was already
+/// resolved by the time the screen mounted). Failed state offers a Retry.
+class _SyncBadge extends StatelessWidget {
+  const _SyncBadge({required this.status, this.onRetry});
+
+  final SyncStatus status;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    if (status == SyncStatus.idle) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+
+    final Color bg;
+    final Color fg;
+    final IconData icon;
+    final String label;
+    Widget? trailing;
+
+    switch (status) {
+      case SyncStatus.idle:
+        return const SizedBox.shrink();
+      case SyncStatus.syncing:
+        bg = scheme.surfaceContainerHigh;
+        fg = scheme.onSurfaceVariant;
+        icon = Icons.cloud_sync_outlined;
+        label = 'Syncing result…';
+        trailing = SizedBox(
+          width: 14,
+          height: 14,
+          child: CircularProgressIndicator(strokeWidth: 2, color: fg),
+        );
+      case SyncStatus.synced:
+        bg = scheme.tertiaryContainer;
+        fg = scheme.onTertiaryContainer;
+        icon = Icons.cloud_done_outlined;
+        label = 'Result saved to leaderboard';
+      case SyncStatus.failed:
+        bg = scheme.errorContainer;
+        fg = scheme.onErrorContainer;
+        icon = Icons.cloud_off_outlined;
+        label = "Couldn't save result";
+        trailing = TextButton(
+          onPressed: onRetry,
+          style: TextButton.styleFrom(
+            foregroundColor: fg,
+            minimumSize: const Size(0, 32),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: const Text('Retry'),
+        );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: fg),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(label, style: text.bodySmall?.copyWith(color: fg)),
+            ),
+            if (trailing != null) trailing,
+          ],
+        ),
       ),
     );
   }

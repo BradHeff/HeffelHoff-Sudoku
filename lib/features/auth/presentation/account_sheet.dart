@@ -158,6 +158,28 @@ class _SignInFormState extends ConsumerState<_SignInForm> {
     }
   }
 
+  /// Shared launcher for the OAuth (Google / Apple) flows. The browser
+  /// returns control to the app via the deep-link callback, so we close
+  /// the sheet immediately on a successful launch — the Supabase SDK
+  /// completes the session in the background.
+  Future<void> _launchOAuth(Future<bool> Function() launcher) async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await launcher();
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    } on AuthException catch (e) {
+      setState(() => _error = _humaniseAuthError(e.message));
+    } catch (e) {
+      setState(() => _error = '$e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -240,6 +262,34 @@ class _SignInFormState extends ConsumerState<_SignInForm> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : Text(_isSignUp ? 'Sign up' : 'Sign in'),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _busy
+                    ? null
+                    : () => _launchOAuth(
+                          ref.read(authRepositoryProvider).signInWithGoogle,
+                        ),
+                icon: const Icon(Icons.g_mobiledata, size: 24),
+                label: const Text('Google'),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _busy
+                    ? null
+                    : () => _launchOAuth(
+                          ref.read(authRepositoryProvider).signInWithApple,
+                        ),
+                icon: const Icon(Icons.apple, size: 20),
+                label: const Text('Apple'),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         TextButton(

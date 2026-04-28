@@ -6,6 +6,13 @@ class AuthRepository {
 
   final SupabaseClient _client;
 
+  /// Custom URI scheme the OAuth providers redirect back to. Must match
+  /// the intent-filter in `android/app/src/main/AndroidManifest.xml`
+  /// AND be added to the Supabase dashboard's "Redirect URLs" allowlist
+  /// (Authentication → URL Configuration).
+  static const String _oauthRedirect =
+      'heffelhoffsudoku://auth-callback';
+
   User? get currentUser => _client.auth.currentUser;
 
   Stream<AuthState> get authStateChanges => _client.auth.onAuthStateChange;
@@ -26,6 +33,28 @@ class AuthRepository {
 
   Future<AuthResponse> signInAnonymously() {
     return _client.auth.signInAnonymously();
+  }
+
+  /// Launches the Google OAuth flow in the system browser. The callback
+  /// returns to the app via the [_oauthRedirect] deep link, which the
+  /// Supabase SDK auto-completes — `currentUser` is non-null shortly after.
+  Future<bool> signInWithGoogle() {
+    return _client.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: _oauthRedirect,
+    );
+  }
+
+  /// Launches the Apple OAuth flow. On iOS this still uses the system
+  /// browser (sufficient for v1; native sign_in_with_apple would be a
+  /// later polish pass — Apple App Review accepts the browser flow as
+  /// long as Sign in with Apple is offered when other social providers
+  /// are present).
+  Future<bool> signInWithApple() {
+    return _client.auth.signInWithOAuth(
+      OAuthProvider.apple,
+      redirectTo: _oauthRedirect,
+    );
   }
 
   Future<void> signOut() => _client.auth.signOut();

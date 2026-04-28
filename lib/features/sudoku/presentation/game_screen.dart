@@ -58,6 +58,7 @@ class GameScreen extends ConsumerWidget {
                 wasUnderTarget: w.wasUnderTarget,
                 onPlayAgain: replay,
                 onBackToStart: () => context.go('/'),
+                onRetrySubmit: controller.retrySubmitWin,
                 onNext: () {
                   final user = ref.read(authStateProvider).asData?.value;
                   if (user == null) {
