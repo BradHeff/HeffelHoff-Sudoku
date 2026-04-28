@@ -131,17 +131,12 @@
 		<string>LaunchScreen</string>
 		<key>UIMainStoryboardFile</key>
 		<string>Main</string>
-		<!-- Portrait-only — matches main.dart SystemChrome lock and the
-		     Android android:configChanges. Avoids App Review flagging
-		     orientation inconsistency. -->
+		<!-- iPhone-only build (TARGETED_DEVICE_FAMILY = "1") — locked to
+		     portrait. The iPad orientations key is intentionally absent;
+		     this app does not appear on the App Store as iPad-compatible. -->
 		<key>UISupportedInterfaceOrientations</key>
 		<array>
 			<string>UIInterfaceOrientationPortrait</string>
-		</array>
-		<key>UISupportedInterfaceOrientations~ipad</key>
-		<array>
-			<string>UIInterfaceOrientationPortrait</string>
-			<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
