@@ -9,7 +9,12 @@
 	<key>NSPrivacyTracking</key>
 	<true/>
 	<key>NSPrivacyTrackingDomains</key>
-	<array/>
+	<array>
+		<string>googleads.g.doubleclick.net</string>
+		<string>pagead2.googlesyndication.com</string>
+		<string>googleadservices.com</string>
+		<string>google-analytics.com</string>
+	</array>
 	<!-- Required Reason API declarations.  Apple now demands a reason
 	     for any framework-level call to these "fingerprintable" APIs.
 	     Codes come from Apple's published list:

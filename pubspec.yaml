@@ -1,7 +1,7 @@
 name: heffelhoff_sudoku
 description: A stylish Sudoku game with a per-puzzle IQ score, tiered leaderboards, and an envy-inducing top-3 podium. Backed by Supabase.
 publish_to: 'none'
-version: 0.1.0+1
+version: 0.1.0+2
 
 environment:
   sdk: ">=3.5.0 <4.0.0"
