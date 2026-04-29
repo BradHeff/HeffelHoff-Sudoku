@@ -30,9 +30,8 @@ class AdMobInterstitialAdService implements InterstitialAdService {
     defaultValue: '',
   );
 
-  /// Show an ad after every Nth completion. Tune to taste; setting to 1
-  /// means every completion (heavy), 5+ feels generous.
-  static const int _frequencyCap = 3;
+  /// Show an ad after every Nth completion. 1 = every completion.
+  static const int _frequencyCap = 1;
 
   int _completionCount = 0;
 

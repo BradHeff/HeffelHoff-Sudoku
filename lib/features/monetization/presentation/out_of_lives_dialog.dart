@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../domain/products.dart';
 
-enum OutOfLivesChoice { watchAd, purchase, giveUp }
+/// Two outcomes only — purchase path was removed when Pro / paid IAPs
+/// gave way to the rewarded-ad economy.
+enum OutOfLivesChoice { watchAd, giveUp }
 
 Future<OutOfLivesChoice> showOutOfLivesDialog(BuildContext context) async {
   final palette = Theme.of(context).extension<AppPalette>()!;
   final scheme = Theme.of(context).colorScheme;
-  final product = MonetizationProduct.extraLife;
 
   final result = await showDialog<OutOfLivesChoice>(
     context: context,
@@ -17,8 +17,8 @@ Future<OutOfLivesChoice> showOutOfLivesDialog(BuildContext context) async {
       icon: Icon(Icons.heart_broken, color: palette.lifeRed, size: 44),
       title: const Text('Out of lives'),
       content: const Text(
-        'Keep going? Watch a quick ad or buy a life — you can do '
-        'this once per puzzle.',
+        'Keep going? Watch a quick ad to earn one more life — you can '
+        'do this once per puzzle.',
         textAlign: TextAlign.center,
       ),
       actionsAlignment: MainAxisAlignment.center,
@@ -30,14 +30,6 @@ Future<OutOfLivesChoice> showOutOfLivesDialog(BuildContext context) async {
             onPressed: () => Navigator.of(ctx).pop(OutOfLivesChoice.watchAd),
             icon: const Icon(Icons.play_circle_outline),
             label: const Text('Watch ad — 1 life'),
-          ),
-        ),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: () => Navigator.of(ctx).pop(OutOfLivesChoice.purchase),
-            icon: const Icon(Icons.shopping_cart_outlined, size: 16),
-            label: Text('Buy 1 life ${product.formattedPrice}'),
           ),
         ),
         TextButton(

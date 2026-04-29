@@ -1,7 +1,7 @@
 name: heffelhoff_sudoku
 description: A stylish Sudoku game with a per-puzzle IQ score, tiered leaderboards, and an envy-inducing top-3 podium. Backed by Supabase.
 publish_to: 'none'
-version: 0.1.0+2
+version: 0.1.0+3
 
 environment:
   sdk: ">=3.5.0 <4.0.0"
@@ -27,6 +27,9 @@ dependencies:
   sqlite3_flutter_libs: ^0.5.24
   path_provider: ^2.1.5
   path: ^1.9.0
+  # Persistent key-value store for the rewarded-ad economy (evil unlock,
+  # bonus-life pool, ad watch counter).
+  shared_preferences: ^2.3.0
 
   # Network awareness
   connectivity_plus: ^6.1.0

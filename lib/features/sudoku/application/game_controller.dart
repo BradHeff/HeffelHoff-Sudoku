@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/audio/sound_service.dart';
+import '../../monetization/data/rewarded_economy_service.dart';
+import '../../monetization/presentation/boost_offer_sheet.dart';
+import '../../monetization/presentation/evil_unlock_sheet.dart';
 import '../../profile/data/best_iq_repository.dart';
 import '../data/attempts_repository.dart';
 import '../data/backtracking_generator.dart';
@@ -22,7 +25,9 @@ class GameController extends StateNotifier<GameState> {
     required Ref ref,
     int? seed,
     int maxLives = 3,
+    int hintCap = 1,
   })  : _maxLives = maxLives,
+        _hintCap = hintCap,
         _sound = sound,
         _attempts = attempts,
         _ref = ref,
@@ -31,6 +36,8 @@ class GameController extends StateNotifier<GameState> {
   }
 
   final int _maxLives;
+  final int _hintCap;
+  int get hintCap => _hintCap;
   final SoundService _sound;
   final AttemptsRepository _attempts;
   final Ref _ref;
@@ -142,13 +149,10 @@ class GameController extends StateNotifier<GameState> {
       return true;
     }
 
-    if (cell.value == digit) {
-      state = s.copyWith(
-        board: s.board.withCell(cell.copyWith(value: 0, pencilMarks: 0, isWrong: false)),
-      );
-      return true;
-    }
-
+    // Once a digit has been correctly placed, the cell is locked. Any
+    // further taps (same digit or different) on a filled, non-wrong cell
+    // are no-ops. Wrong-flagged cells stay editable until the 1.2s
+    // auto-clear runs.
     if (cell.value != 0 && !cell.isWrong) {
       return false;
     }
@@ -194,6 +198,7 @@ class GameController extends StateNotifier<GameState> {
         mistakes: mistakes,
       );
       if (ongoingSnap.extraLifeUsed) {
+        _flagLossPopup();
         state = GameLost(
           puzzle: s.puzzle,
           timeSeconds: s.elapsed.inSeconds,
@@ -204,6 +209,28 @@ class GameController extends StateNotifier<GameState> {
       }
     }
     return false;
+  }
+
+  /// After a Medium / Hard win, queue the Evil-unlock offer for the
+  /// home screen — but only if Evil hasn't already been unlocked.
+  /// Other tiers (including Evil itself) skip the offer.
+  void _flagWinPopupsIfNeeded(Difficulty tier) {
+    if (tier != Difficulty.medium && tier != Difficulty.hard) return;
+    final econ = _ref.read(rewardedEconomyProvider);
+    if (econ.evilUnlocked) return;
+    _ref.read(pendingEvilUnlockOfferProvider.notifier).state = true;
+  }
+
+  /// Records the loss and only queues the boost offer on every Nth
+  /// failure — see RewardedEconomyService for the cadence. Showing the
+  /// sheet after every loss was too aggressive.
+  void _flagLossPopup() {
+    final econ = _ref.read(rewardedEconomyProvider.notifier);
+    econ.recordLossAndShouldOffer().then((shouldOffer) {
+      if (shouldOffer) {
+        _ref.read(pendingBoostOfferProvider.notifier).state = true;
+      }
+    });
   }
 
   /// Refunds 1 life after the player accepted the out-of-lives offer
@@ -221,6 +248,7 @@ class GameController extends StateNotifier<GameState> {
     final s = state;
     if (s is! GameOutOfLives) return;
     final cur = s.ongoing;
+    _flagLossPopup();
     state = GameLost(
       puzzle: cur.puzzle,
       timeSeconds: cur.elapsed.inSeconds,
@@ -243,6 +271,15 @@ class GameController extends StateNotifier<GameState> {
     if (sel == null) return;
     final cell = s.board.at(sel.row, sel.col);
     if (cell.isGiven || cell.isEmpty) return;
+    // Correctly-placed cells are locked. Erase only clears wrong-flagged
+    // values and pencil marks.
+    if (cell.value != 0 && !cell.isWrong) {
+      if (cell.pencilMarks == 0) return;
+      state = s.copyWith(
+        board: s.board.withCell(cell.copyWith(pencilMarks: 0)),
+      );
+      return;
+    }
     state = s.copyWith(
       board: s.board.withCell(cell.copyWith(value: 0, pencilMarks: 0, isWrong: false)),
     );
@@ -325,6 +362,7 @@ class GameController extends StateNotifier<GameState> {
         iqScore: iq.iqScore,
       );
       unawaited(_runSubmitWin());
+      _flagWinPopupsIfNeeded(s.difficulty);
 
       state = GameWon(
         puzzle: s.puzzle,
@@ -440,11 +478,29 @@ class GameController extends StateNotifier<GameState> {
 
 final gameControllerProvider = StateNotifierProvider.autoDispose
     .family<GameController, GameState, ({Difficulty difficulty, int? seed})>(
-  (ref, args) => GameController(
-    difficulty: args.difficulty,
-    seed: args.seed,
-    sound: ref.watch(soundServiceProvider),
-    attempts: ref.watch(attemptsRepositoryProvider),
-    ref: ref,
-  ),
+  (ref, args) {
+    // Compute the per-puzzle starting lives + hints from the rewarded
+    // economy. Order of precedence:
+    //   base 3 lives
+    //   + pending boost (2 if user watched the post-loss ad)
+    //   + drain from persistent bonus pool (loyalty milestone reward)
+    // Capped at 5.
+    final econ = ref.read(rewardedEconomyProvider.notifier);
+    final boost = econ.consumeNextPuzzleBoost();
+    var lives = 3 + boost.lives;
+    final headroom = (kMaxPuzzleLives - lives).clamp(0, kMaxPuzzleLives);
+    if (headroom > 0) {
+      lives += econ.drainBonusPool(headroom);
+    }
+    final hintCap = (1 + boost.hints).clamp(1, kMaxPuzzleHints);
+    return GameController(
+      difficulty: args.difficulty,
+      seed: args.seed,
+      sound: ref.watch(soundServiceProvider),
+      attempts: ref.watch(attemptsRepositoryProvider),
+      ref: ref,
+      maxLives: lives,
+      hintCap: hintCap,
+    );
+  },
 );

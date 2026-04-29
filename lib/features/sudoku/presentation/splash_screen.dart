@@ -2,12 +2,14 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/audio/sound_service.dart';
 import '../../../core/theme/app_text_styles.dart';
 
 /// In-app splash with animated brain logo + spark ring.
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({
     super.key,
     this.duration = const Duration(milliseconds: 2200),
@@ -16,10 +18,10 @@ class SplashScreen extends StatefulWidget {
   final Duration duration;
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerProviderStateMixin {
   late final AnimationController _ringController;
 
   @override
@@ -29,6 +31,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       vsync: this,
       duration: const Duration(seconds: 8),
     )..repeat();
+    // Pre-warm SFX pools while the splash plays so the first place /
+    // structure-complete sound has no audible asset-load delay.
+    ref.read(soundServiceProvider).warmAll();
     Future<void>.delayed(widget.duration, () {
       if (!mounted) return;
       context.go('/');

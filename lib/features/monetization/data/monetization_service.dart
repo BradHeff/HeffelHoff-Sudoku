@@ -1,19 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../domain/products.dart';
 import 'interstitial_ad_service.dart';
 import 'rewarded_ad_service.dart';
 
 abstract class MonetizationService {
-  /// Buy [product]. True on a successful, server-verified purchase.
-  Future<bool> purchase(MonetizationProduct product);
-
-  /// Throttled interstitial shown on puzzle completion. Returns true
-  /// if an ad was actually shown, false if throttled / failed.
+  /// Throttled interstitial shown on puzzle completion.
   Future<bool> maybeShowCompletionAd();
 
-  /// Manual rewarded ad — kept for future opt-in flows. Currently
-  /// unused; the app no longer triggers rewarded ads mid-puzzle.
+  /// Plays a rewarded ad and returns true once the user has earned the
+  /// reward (closed the ad past the threshold). Used by every reward
+  /// flow: out-of-lives, evil-unlock, post-loss boost, in-puzzle hint.
   Future<bool> showRewardedAd();
 }
 
@@ -27,12 +23,6 @@ class HybridMonetizationService implements MonetizationService {
   final RewardedAdService rewarded;
 
   @override
-  Future<bool> purchase(MonetizationProduct product) async {
-    await Future<void>.delayed(const Duration(milliseconds: 700));
-    return true;
-  }
-
-  @override
   Future<bool> maybeShowCompletionAd() => interstitial.maybeShow();
 
   @override
@@ -40,12 +30,6 @@ class HybridMonetizationService implements MonetizationService {
 }
 
 class MockMonetizationService implements MonetizationService {
-  @override
-  Future<bool> purchase(MonetizationProduct product) async {
-    await Future<void>.delayed(const Duration(milliseconds: 700));
-    return true;
-  }
-
   @override
   Future<bool> maybeShowCompletionAd() async => false;
 

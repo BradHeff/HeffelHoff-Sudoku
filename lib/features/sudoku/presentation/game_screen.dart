@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../leaderboard/presentation/leaderboard_screen.dart';
 import '../../monetization/data/monetization_service.dart';
-import '../../monetization/domain/products.dart';
+import '../../monetization/data/rewarded_economy_service.dart';
 import '../../monetization/presentation/out_of_lives_dialog.dart';
 import '../../monetization/presentation/purchase_hint_dialog.dart';
 import '../application/game_controller.dart';
@@ -22,6 +22,9 @@ import 'widgets/peer_solve_banner.dart';
 import 'widgets/structure_complete_toast.dart';
 import 'widgets/timer_chip.dart';
 
+/// Per-puzzle hint cap when no boost has been applied. Increased to 2
+/// when the user buys an extra hint mid-puzzle, or matches the cap
+/// granted at puzzle start by the rewarded boost.
 const int kHintCapFree = 1;
 const int kHintCapWithPurchase = 2;
 
@@ -155,16 +158,10 @@ class _OutOfLivesViewState extends ConsumerState<_OutOfLivesView> {
         final ok = await ref.read(monetizationServiceProvider).showRewardedAd();
         if (!mounted) return;
         if (ok) {
-          widget.controller.restoreLife();
-        } else {
-          widget.controller.confirmGameLost();
-        }
-      case OutOfLivesChoice.purchase:
-        final ok = await ref
-            .read(monetizationServiceProvider)
-            .purchase(MonetizationProduct.extraLife);
-        if (!mounted) return;
-        if (ok) {
+          // Count this rewarded-ad watch toward the loyalty milestone
+          // alongside the post-loss boost ad and the evil-unlock ad.
+          await ref.read(rewardedEconomyProvider.notifier).recordAdWatched();
+          if (!mounted) return;
           widget.controller.restoreLife();
         } else {
           widget.controller.confirmGameLost();
@@ -237,13 +234,17 @@ class _OngoingViewState extends ConsumerState<_OngoingView> {
   Future<void> _purchaseExtraHint() async {
     final confirmed = await showPurchaseHintDialog(context);
     if (!confirmed || !mounted) return;
-    final ok = await ref.read(monetizationServiceProvider).purchase(MonetizationProduct.extraHint);
+    final ok = await ref.read(monetizationServiceProvider).showRewardedAd();
     if (!mounted) return;
     if (ok) {
+      // Loyalty: every rewarded ad — including the in-puzzle hint — counts
+      // toward the +5 bonus-lives milestone.
+      await ref.read(rewardedEconomyProvider.notifier).recordAdWatched();
+      if (!mounted) return;
       widget.controller.purchaseExtraHint();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Purchase failed. Please try again.')),
+        const SnackBar(content: Text('Ad unavailable. Try again in a moment.')),
       );
     }
   }
@@ -252,9 +253,13 @@ class _OngoingViewState extends ConsumerState<_OngoingView> {
   Widget build(BuildContext context) {
     final state = widget.state;
     final controller = widget.controller;
-    final hintCap = state.extraHintPurchased ? kHintCapWithPurchase : kHintCapFree;
+    // Base cap comes from the controller (boosted to 2 when a rewarded
+    // ad was watched after the previous loss). Mid-puzzle buy-hint
+    // upgrades that to 2 as well via extraHintPurchased.
+    final baseCap = controller.hintCap;
+    final hintCap = state.extraHintPurchased ? kHintCapWithPurchase : baseCap;
     final hintsRemaining = (hintCap - state.hintsUsed).clamp(0, hintCap);
-    final canBuyExtraHint = !state.extraHintPurchased && state.hintsUsed >= kHintCapFree;
+    final canBuyExtraHint = !state.extraHintPurchased && state.hintsUsed >= baseCap;
     final celebrateDigit = state.lastCompletedDigit;
     final celebrateRow = state.lastCompletedRow;
     final celebrateCol = state.lastCompletedCol;
@@ -493,8 +498,8 @@ class _ToolsRow extends StatelessWidget {
           onTap: onPencil,
         ),
         _ToolButton(
-          icon: showBuyAffordance ? Icons.add_circle_outline : Icons.lightbulb_outline,
-          label: showBuyAffordance ? 'Buy hint' : 'Hint',
+          icon: showBuyAffordance ? Icons.play_circle_outline : Icons.lightbulb_outline,
+          label: showBuyAffordance ? 'Earn hint' : 'Hint',
           badge: showBuyAffordance ? '+1' : '$hintsRemaining',
           badgeOn: showBuyAffordance || hintsRemaining > 0,
           onTap: showBuyAffordance ? onBuyExtraHint : onHint,
