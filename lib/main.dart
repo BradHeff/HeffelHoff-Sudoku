@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
 import 'core/supabase/supabase_client.dart';
+import 'features/monetization/data/rewarded_economy_service.dart';
 
 /// Comma-separated AdMob test device hashes. Devices whose advertising
 /// ID matches one of these IDs always receive test ads, even in release
@@ -28,8 +30,12 @@ Future<void> main() async {
     DeviceOrientation.portraitDown,
   ]);
   await initSupabase();
+  final prefs = await SharedPreferences.getInstance();
   unawaited(_initMobileAds());
-  runApp(const ProviderScope(child: HeffelHoffSudokuApp()));
+  runApp(ProviderScope(
+    overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+    child: const HeffelHoffSudokuApp(),
+  ));
 }
 
 Future<void> _initMobileAds() async {

@@ -24,7 +24,20 @@ class LeaderboardRepository {
         .order('best_iq', ascending: false)
         .order('achieved_at', ascending: true)
         .limit(limit);
-    return rows.map<LeaderboardEntry>(LeaderboardEntry.fromRow).toList();
+    final entries = rows.map<LeaderboardEntry>(LeaderboardEntry.fromRow).toList();
+    // Defensive re-sort. PostgREST's order= directive applied alongside
+    // a `profiles!inner` embed has produced wrong orderings in the wild
+    // (rank 2 with a lower IQ than rank 3). Sorting client-side
+    // guarantees the displayed order matches the spec regardless of
+    // server-side quirks. Tie-break: earliest achieved_at wins.
+    entries.sort((a, b) {
+      final iqCmp = b.bestIq.compareTo(a.bestIq);
+      if (iqCmp != 0) return iqCmp;
+      final timeCmp = a.bestTimeSeconds.compareTo(b.bestTimeSeconds);
+      if (timeCmp != 0) return timeCmp;
+      return a.achievedAt.compareTo(b.achievedAt);
+    });
+    return entries;
   }
 
   /// Realtime stream — re-fetches the top-N on any leaderboard change.

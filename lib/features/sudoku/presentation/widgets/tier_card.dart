@@ -62,11 +62,18 @@ class TierCard extends StatefulWidget {
     required this.tier,
     required this.onTap,
     this.height,
+    this.locked = false,
   });
 
   final Difficulty tier;
   final VoidCallback onTap;
   final double? height;
+
+  /// When true, the card is rendered in a Pro-locked state (grey-tinted,
+  /// lock badge in place of the chevron, animations stilled). The
+  /// `onTap` callback still fires — call sites typically open the
+  /// paywall instead of starting the game.
+  final bool locked;
 
   static int minHeightFor(Difficulty tier) =>
       _TierStyle.values[tier]!.minHeight;
@@ -86,7 +93,20 @@ class _TierCardState extends State<TierCard> with SingleTickerProviderStateMixin
       duration: const Duration(seconds: 6),
     );
     final style = _TierStyle.values[widget.tier]!;
-    if (style.intensity >= 2) _spin.repeat();
+    if (style.intensity >= 2 && !widget.locked) _spin.repeat();
+  }
+
+  @override
+  void didUpdateWidget(covariant TierCard old) {
+    super.didUpdateWidget(old);
+    if (widget.locked != old.locked) {
+      final style = _TierStyle.values[widget.tier]!;
+      if (style.intensity >= 2 && !widget.locked) {
+        _spin.repeat();
+      } else {
+        _spin.stop();
+      }
+    }
   }
 
   @override
@@ -101,10 +121,11 @@ class _TierCardState extends State<TierCard> with SingleTickerProviderStateMixin
     final scheme = Theme.of(context).colorScheme;
     final palette = Theme.of(context).extension<AppPalette>()!;
     final text = Theme.of(context).textTheme;
+    final locked = widget.locked;
 
     final h = widget.height ?? style.minHeight.toDouble();
 
-    return GestureDetector(
+    final card = GestureDetector(
       onTap: widget.onTap,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
@@ -112,7 +133,7 @@ class _TierCardState extends State<TierCard> with SingleTickerProviderStateMixin
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            if (style.intensity >= 2)
+            if (style.intensity >= 2 && !locked)
               Positioned.fill(
                 child: AnimatedBuilder(
                   animation: _spin,
@@ -153,7 +174,7 @@ class _TierCardState extends State<TierCard> with SingleTickerProviderStateMixin
                 child: Stack(
                   clipBehavior: Clip.hardEdge,
                   children: [
-                    if (style.intensity >= 3)
+                    if (style.intensity >= 3 && !locked)
                       Positioned.fill(
                         child: AnimatedBuilder(
                           animation: _spin,
@@ -167,7 +188,7 @@ class _TierCardState extends State<TierCard> with SingleTickerProviderStateMixin
                         ),
                       ),
 
-                    if (style.intensity >= 4)
+                    if (style.intensity >= 4 && !locked)
                       Positioned.fill(
                         child: const _ShimmerSweep(),
                       ),
@@ -176,7 +197,7 @@ class _TierCardState extends State<TierCard> with SingleTickerProviderStateMixin
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       child: Row(
                         children: [
-                          _TierIcon(style: style, palette: palette),
+                          _TierIcon(style: style, palette: palette, locked: locked),
                           const SizedBox(width: 16),
                           Expanded(
                             child: Column(
@@ -189,15 +210,55 @@ class _TierCardState extends State<TierCard> with SingleTickerProviderStateMixin
                                       widget.tier.label,
                                       style: text.titleLarge?.copyWith(
                                         fontWeight: FontWeight.w800,
+                                        color: locked
+                                            ? scheme.onSurfaceVariant
+                                            : null,
                                       ),
                                     ),
                                     const SizedBox(width: 8),
-                                    _RankBadge(style: style),
+                                    if (locked)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: scheme.surfaceContainerHigh,
+                                          borderRadius: BorderRadius.circular(999),
+                                          border: Border.all(
+                                            color: scheme.outlineVariant,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.play_circle_outline,
+                                              size: 11,
+                                              color: scheme.onSurfaceVariant,
+                                            ),
+                                            const SizedBox(width: 3),
+                                            Text(
+                                              'AD UNLOCK',
+                                              style: TextStyle(
+                                                color: scheme.onSurfaceVariant,
+                                                fontWeight: FontWeight.w800,
+                                                fontSize: 9,
+                                                letterSpacing: 1.2,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      )
+                                    else
+                                      _RankBadge(style: style),
                                   ],
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  'Base IQ ${widget.tier.baseIQ} · target ${_fmtTime(widget.tier.targetTimeSeconds)}',
+                                  locked
+                                      ? 'Tap to unlock — watch a quick ad'
+                                      : 'Base IQ ${widget.tier.baseIQ} · target ${_fmtTime(widget.tier.targetTimeSeconds)}',
                                   style: text.bodyMedium?.copyWith(
                                     color: scheme.onSurfaceVariant,
                                   ),
@@ -206,10 +267,12 @@ class _TierCardState extends State<TierCard> with SingleTickerProviderStateMixin
                             ),
                           ),
                           Icon(
-                            Icons.chevron_right,
-                            color: style.intensity >= 3
-                                ? style.accent.first
-                                : scheme.onSurfaceVariant,
+                            locked ? Icons.lock_outline : Icons.chevron_right,
+                            color: locked
+                                ? scheme.onSurfaceVariant
+                                : (style.intensity >= 3
+                                    ? style.accent.first
+                                    : scheme.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -222,6 +285,22 @@ class _TierCardState extends State<TierCard> with SingleTickerProviderStateMixin
         ),
       ),
     );
+
+    if (!locked) return card;
+    // Locked state: desaturate the card and dim it so it visibly recedes
+    // next to unlocked tiers.
+    return Opacity(
+      opacity: 0.62,
+      child: ColorFiltered(
+        colorFilter: const ColorFilter.matrix([
+          0.33, 0.33, 0.33, 0, 0,
+          0.33, 0.33, 0.33, 0, 0,
+          0.33, 0.33, 0.33, 0, 0,
+          0,    0,    0,    1, 0,
+        ]),
+        child: card,
+      ),
+    );
   }
 
   static String _fmtTime(int seconds) {
@@ -232,9 +311,14 @@ class _TierCardState extends State<TierCard> with SingleTickerProviderStateMixin
 }
 
 class _TierIcon extends StatelessWidget {
-  const _TierIcon({required this.style, required this.palette});
+  const _TierIcon({
+    required this.style,
+    required this.palette,
+    this.locked = false,
+  });
   final _TierStyle style;
   final AppPalette palette;
+  final bool locked;
 
   @override
   Widget build(BuildContext context) {
@@ -263,7 +347,7 @@ class _TierIcon extends StatelessWidget {
       ),
     );
 
-    if (style.intensity >= 1) {
+    if (style.intensity >= 1 && !locked) {
       icon = icon
           .animate(onPlay: (c) => c.repeat(reverse: true))
           .scaleXY(
@@ -273,7 +357,7 @@ class _TierIcon extends StatelessWidget {
             curve: Curves.easeInOut,
           );
     }
-    if (style.intensity >= 3) {
+    if (style.intensity >= 3 && !locked) {
       icon = SizedBox(
         width: 54,
         height: 54,

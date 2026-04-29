@@ -58,6 +58,7 @@ class ProfileRepository {
         .eq('id', userId);
   }
 
+
   /// Returns null if the username is acceptable, else a short error.
   static String? validateUsername(String raw) {
     final name = raw.trim();
@@ -81,3 +82,4 @@ final currentProfileProvider = FutureProvider.autoDispose<Profile?>((ref) async 
   final repo = ref.watch(profileRepositoryProvider);
   return repo.fetch(user.id);
 });
+

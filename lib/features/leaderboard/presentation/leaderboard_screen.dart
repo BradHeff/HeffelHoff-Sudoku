@@ -52,56 +52,66 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
     final stream = ref.watch(leaderboardStreamProvider(_tier));
     final currentUser = ref.watch(authStateProvider).asData?.value;
 
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => context.go('/'),
-                    icon: const Icon(Icons.arrow_back),
-                  ),
-                  const SizedBox(width: 4),
-                  Text('Leaderboard', style: text.headlineSmall),
-                  const Spacer(),
-                  Icon(Icons.emoji_events_outlined, color: scheme.onSurfaceVariant),
-                ],
+    return PopScope<Object?>(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        // Android hardware back / iOS edge-swipe should return to the
+        // home screen, never close the app from here. Only the home
+        // screen itself is allowed to be the exit point.
+        context.go('/');
+      },
+      child: Scaffold(
+        body: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => context.go('/'),
+                      icon: const Icon(Icons.arrow_back),
+                    ),
+                    const SizedBox(width: 4),
+                    Text('Leaderboard', style: text.headlineSmall),
+                    const Spacer(),
+                    Icon(Icons.emoji_events_outlined, color: scheme.onSurfaceVariant),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            _TierChips(
-              selected: _tier,
-              onSelect: (t) => setState(() => _tier = t),
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: () async {
-                  ref.invalidate(leaderboardStreamProvider(_tier));
-                  await Future<void>.delayed(const Duration(milliseconds: 400));
-                },
-                child: stream.when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: [
-                      SizedBox(height: MediaQuery.of(context).size.height * 0.15),
-                      _ErrorView(message: '$e'),
-                    ],
-                  ),
-                  data: (entries) => _LeaderboardBody(
-                    entries: entries,
-                    currentUserId: currentUser?.id,
-                    arrival: widget.arrival?.tier == _tier ? widget.arrival : null,
+              const SizedBox(height: 8),
+              _TierChips(
+                selected: _tier,
+                onSelect: (t) => setState(() => _tier = t),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    ref.invalidate(leaderboardStreamProvider(_tier));
+                    await Future<void>.delayed(const Duration(milliseconds: 400));
+                  },
+                  child: stream.when(
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (e, _) => ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        SizedBox(height: MediaQuery.of(context).size.height * 0.15),
+                        _ErrorView(message: '$e'),
+                      ],
+                    ),
+                    data: (entries) => _LeaderboardBody(
+                      entries: entries,
+                      currentUserId: currentUser?.id,
+                      arrival: widget.arrival?.tier == _tier ? widget.arrival : null,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

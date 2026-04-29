@@ -16,12 +16,16 @@ enum SoundEvent {
   final String filename;
 }
 
+/// Low-latency SFX. Each event gets its own pre-loaded `AudioPool` so
+/// `play()` returns instantly without hitting the asset bundle. Without
+/// pooling, every fire pays a stop+setSource roundtrip — audible delay
+/// on rapid digit placements / structure-completion bursts.
 class SoundService {
   SoundService();
 
   bool _muted = false;
   double _volume = 1.0;
-  final Map<SoundEvent, AudioPlayer> _players = {};
+  final Map<SoundEvent, Future<AudioPool>> _pools = {};
   final Set<SoundEvent> _missing = {};
 
   bool get muted => _muted;
@@ -29,46 +33,55 @@ class SoundService {
 
   void setMuted(bool value) {
     _muted = value;
-    if (_muted) {
-      for (final p in _players.values) {
-        p.stop();
-      }
-    }
   }
 
   void setVolume(double v) {
     _volume = v.clamp(0.0, 1.0);
-    for (final p in _players.values) {
-      p.setVolume(_volume);
-    }
+  }
+
+  /// Pre-loads every SFX into its pool so the first occurrence in-game
+  /// has no asset-load delay. Call from the splash screen.
+  Future<void> warmAll() async {
+    await Future.wait(SoundEvent.values.map(_poolFor));
+  }
+
+  Future<AudioPool> _poolFor(SoundEvent event) {
+    return _pools.putIfAbsent(event, () async {
+      try {
+        return await AudioPool.create(
+          source: AssetSource('audio/${event.filename}'),
+          maxPlayers: 2,
+        );
+      } catch (e, st) {
+        _missing.add(event);
+        if (kDebugMode) {
+          debugPrint('[SoundService] missing or unplayable: ${event.filename} — $e');
+          debugPrintStack(stackTrace: st, maxFrames: 3);
+        }
+        rethrow;
+      }
+    });
   }
 
   Future<void> play(SoundEvent event) async {
     if (_muted) return;
     if (_missing.contains(event)) return;
     try {
-      final player = _players.putIfAbsent(
-        event,
-        () => AudioPlayer(playerId: 'sfx_${event.name}')
-          ..setReleaseMode(ReleaseMode.stop),
-      );
-      await player.stop();
-      await player.setVolume(_volume);
-      await player.play(AssetSource('audio/${event.filename}'));
-    } catch (e, st) {
+      final pool = await _poolFor(event);
+      await pool.start(volume: _volume);
+    } catch (_) {
       _missing.add(event);
-      if (kDebugMode) {
-        debugPrint('[SoundService] missing or unplayable: ${event.filename} — $e');
-        debugPrintStack(stackTrace: st, maxFrames: 3);
-      }
     }
   }
 
   Future<void> dispose() async {
-    for (final p in _players.values) {
-      await p.dispose();
+    for (final f in _pools.values) {
+      try {
+        final pool = await f;
+        await pool.dispose();
+      } catch (_) {}
     }
-    _players.clear();
+    _pools.clear();
   }
 }
 

@@ -37,3 +37,35 @@ final userBestIqProvider =
   );
   return BestIqEntry(iq: row['best_iq'] as int, tier: tier);
 });
+
+/// Tiers in which the current user holds the #1 leaderboard spot. Used
+/// by the home-screen progression header to surface a top-rank crown.
+class TopRankInfo {
+  const TopRankInfo({required this.tiers});
+  final List<Difficulty> tiers;
+  bool get hasAny => tiers.isNotEmpty;
+}
+
+/// Detects #1 ranking by querying the top row per tier in parallel and
+/// matching against the current user. Five tiny queries that return one
+/// row each — cheaper than fetching whole leaderboards just for this
+/// check, and avoids spinning up five realtime subscriptions on the
+/// home screen.
+final userTopRanksProvider = FutureProvider.autoDispose<TopRankInfo>((ref) async {
+  final user = ref.watch(authStateProvider).asData?.value;
+  if (user == null) return const TopRankInfo(tiers: []);
+
+  final client = Supabase.instance.client;
+  final results = await Future.wait(Difficulty.values.map((tier) async {
+    final rows = await client
+        .from('leaderboard_entries')
+        .select('user_id')
+        .eq('difficulty', tier.id)
+        .order('best_iq', ascending: false)
+        .order('achieved_at', ascending: true)
+        .limit(1);
+    if (rows.isEmpty) return null;
+    return rows.first['user_id'] == user.id ? tier : null;
+  }));
+  return TopRankInfo(tiers: results.whereType<Difficulty>().toList());
+});

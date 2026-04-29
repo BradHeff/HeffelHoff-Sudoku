@@ -7,16 +7,60 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../auth/data/profile_repository.dart';
-import '../../auth/presentation/account_sheet.dart';
+import '../../monetization/data/rewarded_economy_service.dart';
+import '../../monetization/presentation/boost_offer_sheet.dart';
+import '../../monetization/presentation/evil_unlock_sheet.dart';
 import '../../profile/presentation/widgets/progression_header.dart';
 import '../domain/difficulty.dart';
 import 'widgets/tier_card.dart';
 
-class DifficultySelectScreen extends ConsumerWidget {
+/// Shared helper for tapping a tier from the home grid. Locked Evil
+/// (until the rewarded-ad unlock) opens the unlock sheet instead of
+/// navigating; everything else just goes to the game.
+void _onTierTap(BuildContext context, WidgetRef ref, Difficulty tier) {
+  final evilUnlocked = ref.read(rewardedEconomyProvider).evilUnlocked;
+  if (tier == Difficulty.evil && !evilUnlocked) {
+    showEvilUnlockSheet(context);
+    return;
+  }
+  context.go('/game/${tier.id}');
+}
+
+class DifficultySelectScreen extends ConsumerStatefulWidget {
   const DifficultySelectScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DifficultySelectScreen> createState() =>
+      _DifficultySelectScreenState();
+}
+
+class _DifficultySelectScreenState extends ConsumerState<DifficultySelectScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Drain queued popups on the next frame. Evil unlock takes
+    // precedence over the loss-boost offer if both happened to be
+    // queued (rare — would mean the user lost a game then won
+    // Medium/Hard before the home screen mounted).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final evilFlag = ref.read(pendingEvilUnlockOfferProvider);
+      final boostFlag = ref.read(pendingBoostOfferProvider);
+      if (evilFlag) {
+        ref.read(pendingEvilUnlockOfferProvider.notifier).state = false;
+        ref.read(pendingBoostOfferProvider.notifier).state = false;
+        showEvilUnlockSheet(context);
+        return;
+      }
+      if (boostFlag) {
+        ref.read(pendingBoostOfferProvider.notifier).state = false;
+        showBoostOfferSheet(context);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final palette = Theme.of(context).extension<AppPalette>()!;
 
@@ -113,6 +157,11 @@ class DifficultySelectScreen extends ConsumerWidget {
                         totalSeparators;
                     final available = constraints.maxHeight;
 
+                    final evilUnlocked =
+                        ref.watch(rewardedEconomyProvider).evilUnlocked;
+                    bool isLocked(Difficulty t) =>
+                        t == Difficulty.evil && !evilUnlocked;
+
                     if (available <= totalMinHeight) {
                       return ListView.separated(
                         padding: EdgeInsets.zero,
@@ -124,7 +173,8 @@ class DifficultySelectScreen extends ConsumerWidget {
                           final tier = tiers[i];
                           return TierCard(
                             tier: tier,
-                            onTap: () => context.go('/game/${tier.id}'),
+                            locked: isLocked(tier),
+                            onTap: () => _onTierTap(context, ref, tier),
                           )
                               .animate(delay: (80 * i).ms)
                               .fadeIn(duration: 300.ms)
@@ -140,7 +190,8 @@ class DifficultySelectScreen extends ConsumerWidget {
                         for (var i = 0; i < tiers.length; i++) ...[
                           TierCard(
                             tier: tiers[i],
-                            onTap: () => context.go('/game/${tiers[i].id}'),
+                            locked: isLocked(tiers[i]),
+                            onTap: () => _onTierTap(context, ref, tiers[i]),
                             height: TierCard.minHeightFor(tiers[i]) * scale,
                           )
                               .animate(delay: (80 * i).ms)
@@ -181,7 +232,7 @@ class _AccountAvatarButton extends ConsumerWidget {
       color: scheme.surfaceContainerHigh,
       shape: const CircleBorder(),
       child: InkWell(
-        onTap: () => showAccountSheet(context),
+        onTap: () => context.go('/profile'),
         customBorder: const CircleBorder(),
         child: Container(
           width: 44,
